@@ -1,0 +1,255 @@
+from PIL import Image, ImageDraw, ImageFont
+import easyocr
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
+def display(image):
+    # Display image using Matplotlib
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
+
+
+# Function to fit text within a bounding box
+def fit_text_in_box(draw, text, box, font_path='arial.ttf'):
+    p0, p1, p2, p3 = box
+    box_width = max(p1[0] - p0[0], p2[0] - p3[0])
+    box_height = max(p3[1] - p0[1], p2[1] - p1[1])
+    
+    # Start with a large font size and decrease until the text fits within the box
+    font_size = 100
+    font = ImageFont.truetype(font_path, font_size)
+    text_width, text_height = draw.textsize(text, font=font)
+    
+    while text_width > box_width or text_height > box_height:
+        font_size -= 1
+        font = ImageFont.truetype(font_path, font_size)
+        text_width, text_height = draw.textsize(text, font=font)
+    
+    return font
+# Function to draw bounding boxes around detected text on a given image
+def draw_boxes(image, bounds, color='yellow', width=2, fill_color=None, replace=None):
+    draw = ImageDraw.Draw(image)
+    for i in range(len(bounds)):
+        bound = bounds[i]
+        box = bound[0]
+        
+        p0, p1, p2, p3 = box
+        if fill_color:
+            # Fill the box with the fill color
+            draw.polygon([*p0, *p1, *p2, *p3], fill=fill_color)
+        
+        draw.line([*p0, *p1, *p2, *p3, *p0], fill=(0,255,0), width=width)
+        
+    return image
+
+# Function to draw bounding boxes around detected text on a given image
+def draw_mask(image, bounds, color='yellow', width=2, fill_color=None, replace=None):
+    draw = ImageDraw.Draw(image)
+    for i in range(len(bounds)):
+        bound = bounds[i]
+        box = bound[0]
+        text = replace[i] if replace else bound[1]
+        
+        p0, p1, p2, p3 = box
+        if fill_color:
+            # Fill the box with the fill color
+            draw.polygon([*p0, *p1, *p2, *p3], fill=fill_color)
+        
+        draw.line([*p0, *p1, *p2, *p3, *p0], fill=(193,193,193), width=width)
+        
+        font = fit_text_in_box(draw, text, box)
+        text_width, text_height = draw.textsize(text, font=font)
+        
+        text_x = p0[0] + (p1[0] - p0[0] - text_width) / 2
+        text_y = p0[1] + (p3[1] - p0[1] - text_height) / 2
+        draw.text((text_x, text_y), text, fill=(0,0,0), font=font)
+    
+    return image
+
+
+
+# Function to perform OCR and draw bounding boxes on the image and a blank canvas
+def inference(image_path, lang=['en']):
+    reader = easyocr.Reader(lang)
+    bounds = reader.readtext(image_path)
+    print(bounds)
+    
+    im_with_boxes = Image.open(image_path)
+    draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
+    
+    # Create a blank canvas with the same size as the original image
+    mask = Image.new('RGB', im_with_boxes.size, (255, 255, 255))
+    draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193))
+    
+    return im_with_boxes, mask
+
+def inference_piped(image, lang=['en'], replace=None):
+    
+    image_arr = np.array(image)
+    reader = easyocr.Reader(lang)
+    bounds = reader.readtext(image_arr)
+    print(bounds)
+    im_with_boxes = image.copy()
+    draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
+    
+    # Create a blank canvas with the same size as the original image
+    mask = Image.new('RGB', image.size, (255, 255, 255))
+    draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193), replace=replace)
+    return im_with_boxes, mask
+
+def stitch(images):
+    widths, heights = zip(*(i.size for i in images))
+
+    total_width = sum(widths)
+    max_height = max(heights)
+
+    stitched = Image.new('RGB', (total_width, max_height))
+
+    x_offset = 0
+    for im in images:
+        stitched.paste(im, (x_offset,0))
+        x_offset += im.size[0]
+    return stitched
+
+import numpy as np
+
+def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
+    '''
+    Recorta una imagen alrededor de una palabra específica y devuelve las coordenadas relativas.
+
+    Args:
+        lista_palabras (list): Lista de palabras detectadas en la imagen. (easyocr output)
+        palabra (str): Palabra a recortar.
+        img_array (np.array): Array de la imagen.
+        nueva_dimension (int): Dimensión de la imagen recortada.
+
+    Returns:
+        imagen_recortada (np.array): La imagen recortada.
+        (x_min, y_min, x_max, y_max) (tuple): Coordenadas relativas a la imagen original.
+    '''
+    
+    altura, anchura, _ = img_array.shape
+    mitad_dimension = nueva_dimension // 2
+    
+    for detection in lista_palabras:
+        if detection[1] == palabra:
+            x1, y1 = detection[0][0]
+            x2, y2 = detection[0][2]
+            x3, y3 = detection[0][1]
+            x4, y4 = detection[0][3]
+            x_min = min(x1, x2, x3, x4)
+            x_max = max(x1, x2, x3, x4)
+            y_min = min(y1, y2, y3, y4)
+            y_max = max(y1, y2, y3, y4)
+            x_center = (x_min + x_max) / 2
+            y_center = (y_min + y_max) / 2
+            
+            # Calcular límites
+            x_min = int(x_center - mitad_dimension)
+            x_max = int(x_center + mitad_dimension)
+            y_min = int(y_center - mitad_dimension)
+            y_max = int(y_center + mitad_dimension)
+            
+            # Asegurar que los límites estén dentro de la imagen
+            if x_min < 0:
+                x_min = 0
+                x_max = min(nueva_dimension, anchura)
+            if x_max > anchura:
+                x_max = anchura
+                x_min = max(0, anchura - nueva_dimension)
+            if y_min < 0:
+                y_min = 0
+                y_max = min(nueva_dimension, altura)
+            if y_max > altura:
+                y_max = altura
+                y_min = max(0, altura - nueva_dimension)
+            
+            # Recortar la imagen
+            imagen_recortada = img_array[y_min:y_max, x_min:x_max]
+            
+            # Devolver la imagen recortada y las coordenadas relativas
+            return imagen_recortada, (x_min, y_min, x_max, y_max)
+
+    # Si la palabra no se encuentra, retornar None
+    return None, None
+
+        
+def comparar_imagenes(image_path1, image_path2, coordinates):
+    """
+    Recorta una parte específica de dos imágenes basándose en las mismas coordenadas 
+    y muestra las imágenes recortadas una al lado de la otra para comparación.
+
+    Args:
+    - image_path1 (str): Ruta de la primera imagen.
+    - image_path2 (str): Ruta de la segunda imagen.
+    - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
+                          [x1, y1, x2, y2, x3, y3, x4, y4]
+
+    Returns:
+    - comparison_image (PIL.Image): Imagen combinada mostrando ambas recortes lado a lado.
+    """
+    # Abre ambas imágenes
+    image1 = Image.open(image_path1)
+    image2 = Image.open(image_path2)
+
+    # Extrae las coordenadas
+    x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
+
+    # Calcula el rectángulo de recorte
+    left = min(x1, x2, x3, x4)
+    top = min(y1, y2, y3, y4)
+    right = max(x1, x2, x3, x4)
+    bottom = max(y1, y2, y3, y4)
+
+    # Recorta ambas imágenes usando el bounding box
+    cropped_image1 = image1.crop((left, top, right, bottom))
+    cropped_image2 = image2.crop((left, top, right, bottom))
+
+    # Crear una nueva imagen que combina ambas imágenes recortadas lado a lado
+    width, height = cropped_image1.size
+    comparison_image = Image.new('RGB', (2 * width, height))
+    comparison_image.paste(cropped_image1, (0, 0))
+    comparison_image.paste(cropped_image2, (width, 0))
+
+    # Muestra la imagen comparativa
+    # comparison_image.show()
+
+    # Devuelve la imagen comparativa
+    return comparison_image
+
+def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinates):
+    """
+    Reemplaza una parte de la imagen original con una parte de la imagen modificada usando las mismas coordenadas.
+
+    Args:
+    - original_image_path (str): Ruta de la imagen original.
+    - modified_image_path (str): Ruta de la imagen modificada.
+    - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
+                          [x1, y1, x2, y2, x3, y3, x4, y4]
+
+    Returns:
+    - combined_image (PIL.Image): Imagen resultante con la parte modificada reemplazada en la imagen original.
+    """
+    # Abre las imágenes original y modificada
+    original_image = Image.open(original_image_path)
+    modified_image = Image.open(modified_image_path)
+
+    # Extrae las coordenadas
+    x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
+
+    # Calcula el rectángulo de recorte
+    left = min(x1, x2, x3, x4)
+    top = min(y1, y2, y3, y4)
+    right = max(x1, x2, x3, x4)
+    bottom = max(y1, y2, y3, y4)
+
+    # Recorta la parte modificada de la imagen modificada
+    modified_crop = modified_image.crop((left, top, right, bottom))
+
+    # Pega el recorte de la imagen modificada en la imagen original
+    original_image.paste(modified_crop, (left, top))
+
+    return original_image
