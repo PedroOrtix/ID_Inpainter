@@ -253,3 +253,27 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     original_image.paste(modified_crop, (left, top))
 
     return original_image
+
+def convert_paddle_to_easyocr(paddle_result):
+    """
+    Convierte el resultado de PaddleOCR al formato de EasyOCR.
+
+    Args:
+        paddle_result (list): La salida de PaddleOCR.
+
+    Returns:
+        list: Una lista de tuplas en el formato de EasyOCR.
+    """
+    # Inicializamos la lista para almacenar los resultados convertidos
+    easyocr_result = []
+
+    # Iteramos sobre los bloques de texto en el resultado de PaddleOCR
+    for block in paddle_result[0]:
+        bbox = block[0]  # Coordenadas de la caja delimitadora
+        text = block[1][0]  # El texto reconocido
+        confidence = block[1][1]  # El puntaje de confianza
+
+        # Añadimos el resultado en formato EasyOCR a la lista
+        easyocr_result.append((bbox, text, confidence))
+
+    return easyocr_result
