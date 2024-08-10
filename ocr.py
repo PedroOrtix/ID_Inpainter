@@ -71,34 +71,34 @@ def draw_mask(image, bounds, color='yellow', width=2, fill_color=None, replace=N
 
 
 
-# Function to perform OCR and draw bounding boxes on the image and a blank canvas
-def inference(image_path, lang=['en']):
-    reader = easyocr.Reader(lang)
-    bounds = reader.readtext(image_path)
-    print(bounds)
+# # Function to perform OCR and draw bounding boxes on the image and a blank canvas
+# def inference(image_path, lang=['en']):
+#     reader = easyocr.Reader(lang)
+#     bounds = reader.readtext(image_path)
+#     print(bounds)
     
-    im_with_boxes = Image.open(image_path)
-    draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
+#     im_with_boxes = Image.open(image_path)
+#     draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
     
-    # Create a blank canvas with the same size as the original image
-    mask = Image.new('RGB', im_with_boxes.size, (255, 255, 255))
-    draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193))
+#     # Create a blank canvas with the same size as the original image
+#     mask = Image.new('RGB', im_with_boxes.size, (255, 255, 255))
+#     draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193))
     
-    return im_with_boxes, mask
+#     return im_with_boxes, mask
 
-def inference_piped(image, lang=['en'], replace=None):
+# def inference_piped(image, lang=['en'], replace=None):
     
-    image_arr = np.array(image)
-    reader = easyocr.Reader(lang)
-    bounds = reader.readtext(image_arr)
-    print(bounds)
-    im_with_boxes = image.copy()
-    draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
+#     image_arr = np.array(image)
+#     reader = easyocr.Reader(lang)
+#     bounds = reader.readtext(image_arr)
+#     print(bounds)
+#     im_with_boxes = image.copy()
+#     draw_boxes(im_with_boxes, bounds, (0, 255, 0), 5)
     
-    # Create a blank canvas with the same size as the original image
-    mask = Image.new('RGB', image.size, (255, 255, 255))
-    draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193), replace=replace)
-    return im_with_boxes, mask
+#     # Create a blank canvas with the same size as the original image
+#     mask = Image.new('RGB', image.size, (255, 255, 255))
+#     draw_mask(mask, bounds, (0, 0, 0), 5, fill_color=(193,193,193), replace=replace)
+#     return im_with_boxes, mask
 
 def stitch(images):
     widths, heights = zip(*(i.size for i in images))
