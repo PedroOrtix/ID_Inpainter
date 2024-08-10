@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-import easyocr
+# import easyocr
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
