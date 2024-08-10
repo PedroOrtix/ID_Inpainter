@@ -1,8 +1,8 @@
 # import os
-import easyocr
-import numpy as np
-import ocr
-import PIL.Image as Image
+# import easyocr
+# import numpy as np
+# import ocr
+# import PIL.Image as Image
 # import torch
 # from diffusers import StableDiffusionPipeline
 
