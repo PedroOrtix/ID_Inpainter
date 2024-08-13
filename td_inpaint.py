@@ -2,15 +2,12 @@
 # https://huggingface.co/spaces/JingyeChen22/TextDiffuser-2-Text-Inpainting
 
 import torch
-import gradio as gr
 
 import numpy as np
-import time
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler,UNet2DConditionModel
 from tqdm import tqdm
 from PIL import Image, ImageDraw
-import string
 from inpaint_functions import format_prompt, to_tensor, add_tokens
 
 

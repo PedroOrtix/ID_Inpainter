@@ -276,3 +276,46 @@ def convert_paddle_to_easyocr(paddle_result):
         easyocr_result.append((bbox, text, confidence))
 
     return easyocr_result
+
+def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo):
+    """
+    Recalcula la cuadrícula para acomodar una palabra más grande, aumentando solo el ancho y manteniendo la orientación y la altura.
+    
+    Parameters:
+    cuadricula (list): Lista de coordenadas [x1, y1, x2, y2, x3, y3, x4, y4] que representan un rectángulo rotado.
+    palabra_original (str): Palabra original en el documento.
+    palabra_objetivo (list): Lista de palabras objetivo (nuevas palabras).
+    
+    Returns:
+    list: Nueva lista de coordenadas ajustadas para acomodar la palabra más larga.
+    """
+    
+    # Medir la longitud de la palabra original y de la más larga de las palabras objetivo
+    longitud_original = len(palabra_original)
+    longitud_maxima_objetivo = max([len(palabra) for palabra in palabra_objetivo])
+    
+    # Calcular la proporción de expansión necesaria para el ancho
+    expansion_proporcion = longitud_maxima_objetivo / longitud_original
+    
+    # Extraer las coordenadas originales como puntos (x, y)
+    p1 = np.array([cuadricula[0], cuadricula[1]])
+    p2 = np.array([cuadricula[2], cuadricula[3]])
+    p3 = np.array([cuadricula[4], cuadricula[5]])
+    p4 = np.array([cuadricula[6], cuadricula[7]])
+    
+    # Calcular los vectores de los lados
+    vector_lado_superior = p2 - p1
+    vector_lado_inferior = p3 - p4
+    
+    # Calcular la nueva longitud de los lados, expandiendo en la dirección del vector
+    nuevo_vector_lado_superior = vector_lado_superior * expansion_proporcion
+    nuevo_vector_lado_inferior = vector_lado_inferior * expansion_proporcion
+    
+    # Recalcular las nuevas coordenadas
+    p2_nuevo = p1 + nuevo_vector_lado_superior
+    p3_nuevo = p4 + nuevo_vector_lado_inferior
+    
+    # Devolver la nueva cuadrícula con las coordenadas ajustadas
+    nueva_cuadricula = [p1[0], p1[1], p2_nuevo[0], p2_nuevo[1], p3_nuevo[0], p3_nuevo[1], p4[0], p4[1]]
+    
+    return nueva_cuadricula
