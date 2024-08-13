@@ -114,7 +114,6 @@ def stitch(images):
         x_offset += im.size[0]
     return stitched
 
-import numpy as np
 
 def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
     '''

@@ -1,7 +1,7 @@
 from td_inpaint import inpaint
 from inpaint_functions import parse_bounds
 
-def simple_inpaint(image, bounds, word, slider_step=25, slider_guidance=2.5, slider_batch=4):
+def simple_inpaint(image, bounds, word, slider_step=30, slider_guidance=1.5, slider_batch=6):
     """
     Perform inpainting on the given image using the specified bounds and word.
     Args:
@@ -22,8 +22,5 @@ def simple_inpaint(image, bounds, word, slider_step=25, slider_guidance=2.5, sli
     keywords = ""
     positive_prompt = ""
     radio = 8
-    slider_step = 25
-    slider_guidance= 2.5
-    slider_batch= 4
     slider_natural= False
     return inpaint(image, prompt,keywords,positive_prompt,radio,slider_step,slider_guidance,slider_batch,slider_natural, global_dict)
