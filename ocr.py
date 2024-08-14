@@ -176,7 +176,7 @@ def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
     return None, None
 
         
-def comparar_imagenes(image_path1, image_path2, coordinates):
+def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
     """
     Recorta una parte específica de dos imágenes basándose en las mismas coordenadas 
     y muestra las imágenes recortadas una al lado de la otra para comparación.
@@ -213,8 +213,9 @@ def comparar_imagenes(image_path1, image_path2, coordinates):
     comparison_image.paste(cropped_image1, (0, 0))
     comparison_image.paste(cropped_image2, (width, 0))
 
-    # Muestra la imagen comparativa
-    # comparison_image.show()
+    if save_path:
+        cropped_image1.save(f"{save_path}/{image_path1.split('.')[0]}_cropped.jpg")
+        cropped_image2.save(f"{save_path}/{image_path2.split('.')[0]}_cropped.jpg")
 
     # Devuelve la imagen comparativa
     return comparison_image
@@ -227,7 +228,7 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     - original_image_path (str): Ruta de la imagen original.
     - modified_image_path (str): Ruta de la imagen modificada.
     - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
-                          [x1, y1, x2, y2, x3, y3, x4, y4]
+                        [x1, y1, x2, y2, x3, y3, x4, y4]
 
     Returns:
     - combined_image (PIL.Image): Imagen resultante con la parte modificada reemplazada en la imagen original.
