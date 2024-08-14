@@ -284,7 +284,7 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     Parameters:
     cuadricula (list): Lista de coordenadas [x1, y1, x2, y2, x3, y3, x4, y4] que representan un rectángulo rotado.
     palabra_original (str): Palabra original en el documento.
-    palabra_objetivo (list): Lista de palabras objetivo (nuevas palabras).
+    palabra_objetivo (str): Palabra objetivo (nueva palabra).
     
     Returns:
     list: Nueva lista de coordenadas ajustadas para acomodar la palabra más larga.
@@ -292,7 +292,7 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     
     # Medir la longitud de la palabra original y de la más larga de las palabras objetivo
     longitud_original = len(palabra_original)
-    longitud_maxima_objetivo = max([len(palabra) for palabra in palabra_objetivo])
+    longitud_maxima_objetivo = len(palabra_objetivo) 
     
     # Calcular la proporción de expansión necesaria para el ancho
     expansion_proporcion = longitud_maxima_objetivo / longitud_original

@@ -13,3 +13,6 @@ git+https://github.com/JingyeChen/diffusers_td2.git
 # pillow==10.1.0
 sentencepiece
 torch==2.0.1
+langchain==0.2.13
+# langchain-community==0.2.12
+langchain-ollama==0.1.1
