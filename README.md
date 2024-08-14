@@ -1,1 +1,1 @@
-# TexDiff2 Inpaint demo
+# ID Inpaint demo
