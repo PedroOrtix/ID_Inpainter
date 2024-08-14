@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-# import easyocr
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
@@ -175,6 +175,27 @@ def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
     # Si la palabra no se encuentra, retornar None
     return None, None
 
+def calcular_temperatura(imagen):
+    # Convertir la imagen a formato LAB
+    imagen_lab = cv2.cvtColor(imagen, cv2.COLOR_BGR2LAB)
+    # Obtener el promedio de los valores del canal B
+    promedio_temperatura = np.mean(imagen_lab[:,:,2]) - np.mean(imagen_lab[:,:,0])
+    return promedio_temperatura
+
+def ajustar_temperatura(imagen, ajuste):
+    # Convertir la imagen a formato LAB
+    imagen_lab = cv2.cvtColor(imagen, cv2.COLOR_BGR2LAB)
+    
+    # Ajustar el canal B para cambiar la temperatura
+    imagen_lab[:,:,2] = cv2.add(imagen_lab[:,:,2], int(ajuste))
+    
+    # Convertir la imagen de nuevo a formato BGR
+    imagen_ajustada = cv2.cvtColor(imagen_lab, cv2.COLOR_LAB2BGR)
+    
+    # Asegurarse de que los valores estén en el rango de 0 a 255
+    imagen_ajustada = np.clip(imagen_ajustada, 0, 255).astype(np.uint8)
+    
+    return imagen_ajustada
         
 def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
     """
@@ -190,34 +211,46 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
     Returns:
     - comparison_image (PIL.Image): Imagen combinada mostrando ambas recortes lado a lado.
     """
-    # Abre ambas imágenes
-    image1 = Image.open(image_path1)
-    image2 = Image.open(image_path2)
+    # Cargar imágenes usando OpenCV
+    image1 = cv2.imread(image_path1)
+    image2 = cv2.imread(image_path2)
 
-    # Extrae las coordenadas
+    # Extraer coordenadas
     x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
 
-    # Calcula el rectángulo de recorte
+    # Calcular el rectángulo de recorte
     left = min(x1, x2, x3, x4)
     top = min(y1, y2, y3, y4)
     right = max(x1, x2, x3, x4)
     bottom = max(y1, y2, y3, y4)
 
-    # Recorta ambas imágenes usando el bounding box
-    cropped_image1 = image1.crop((left, top, right, bottom))
-    cropped_image2 = image2.crop((left, top, right, bottom))
+    # Recortar ambas imágenes usando el bounding box
+    cropped_image1 = image1[top:bottom, left:right]
+    cropped_image2 = image2[top:bottom, left:right]
+    
+    # Calcular la diferencia de temperatura
+    temp1 = calcular_temperatura(cropped_image1)
+    temp2 = calcular_temperatura(cropped_image2)
+    temp_diff = temp2 - temp1
+    
+    # Ajustar la temperatura de la segunda imagen para igualarla a la primera
+    adjusted_image2 = ajustar_temperatura(cropped_image2, -temp_diff)
+    
+    # Convertir imágenes a formato PIL para la combinación final
+    cropped_image1_pil = Image.fromarray(cv2.cvtColor(cropped_image1, cv2.COLOR_BGR2RGB))
+    adjusted_image2_pil = Image.fromarray(cv2.cvtColor(adjusted_image2, cv2.COLOR_BGR2RGB))
 
     # Crear una nueva imagen que combina ambas imágenes recortadas lado a lado
-    width, height = cropped_image1.size
+    width, height = cropped_image1_pil.size
     comparison_image = Image.new('RGB', (2 * width, height))
-    comparison_image.paste(cropped_image1, (0, 0))
-    comparison_image.paste(cropped_image2, (width, 0))
+    comparison_image.paste(cropped_image1_pil, (0, 0))
+    comparison_image.paste(adjusted_image2_pil, (width, 0))
 
     if save_path:
-        cropped_image1.save(f"{save_path}/{image_path1.split('.')[0]}_cropped.jpg")
-        cropped_image2.save(f"{save_path}/{image_path2.split('.')[0]}_cropped.jpg")
+        cropped_image1_pil.save(f"{save_path}/{image_path1.split('/')[-1].split('.')[0]}_cropped.jpg")
+        adjusted_image2_pil.save(f"{save_path}/{image_path2.split('/')[-1].split('.')[0]}_cropped.jpg")
 
-    # Devuelve la imagen comparativa
+    # Devolver la imagen comparativa
     return comparison_image
 
 def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinates):
@@ -234,8 +267,8 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     - combined_image (PIL.Image): Imagen resultante con la parte modificada reemplazada en la imagen original.
     """
     # Abre las imágenes original y modificada
-    original_image = Image.open(original_image_path)
-    modified_image = Image.open(modified_image_path)
+    original_image = cv2.imread(original_image_path)
+    modified_image = cv2.imread(modified_image_path)
 
     # Extrae las coordenadas
     x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
@@ -247,10 +280,13 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     bottom = max(y1, y2, y3, y4)
 
     # Recorta la parte modificada de la imagen modificada
-    modified_crop = modified_image.crop((left, top, right, bottom))
+    modified_crop = modified_image[top:bottom, left:right]
 
     # Pega el recorte de la imagen modificada en la imagen original
-    original_image.paste(modified_crop, (left, top))
+    original_image[top:bottom, left:right] = modified_crop
+    
+    # Convierte la imagen de nuevo a formato RGB
+    original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
 
     return original_image
 
@@ -283,7 +319,7 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     Recalcula la cuadrícula para acomodar una palabra más grande, aumentando solo el ancho y manteniendo la orientación y la altura.
     
     Parameters:
-    cuadricula (list): Lista de coordenadas [x1, y1, x2, y2, x3, y3, x4, y4] que representan un rectángulo rotado.
+    cuadricula (list): Lista de coordenadas en formato [[x1, y1], [x2, y2], [x3, y3], [x4, y4]] que representan un rectángulo rotado.
     palabra_original (str): Palabra original en el documento.
     palabra_objetivo (str): Palabra objetivo (nueva palabra).
     
@@ -299,12 +335,12 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     expansion_proporcion = longitud_maxima_objetivo / longitud_original
     
     # Extraer las coordenadas originales como puntos (x, y)
-    p1 = np.array([cuadricula[0], cuadricula[1]])
-    p2 = np.array([cuadricula[2], cuadricula[3]])
-    p3 = np.array([cuadricula[4], cuadricula[5]])
-    p4 = np.array([cuadricula[6], cuadricula[7]])
+    p1 = np.array(cuadricula[0])
+    p2 = np.array(cuadricula[1])
+    p3 = np.array(cuadricula[2])
+    p4 = np.array(cuadricula[3])
     
-    # Calcular los vectores de los lados
+    # Calcular los vectores de los lados superior e inferior
     vector_lado_superior = p2 - p1
     vector_lado_inferior = p3 - p4
     
@@ -316,7 +352,7 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     p2_nuevo = p1 + nuevo_vector_lado_superior
     p3_nuevo = p4 + nuevo_vector_lado_inferior
     
-    # Devolver la nueva cuadrícula con las coordenadas ajustadas
-    nueva_cuadricula = [p1[0], p1[1], p2_nuevo[0], p2_nuevo[1], p3_nuevo[0], p3_nuevo[1], p4[0], p4[1]]
+    # Construir la nueva cuadrícula con las coordenadas ajustadas
+    nueva_cuadricula = [p1.tolist(), p2_nuevo.tolist(), p3_nuevo.tolist(), p4.tolist()]
     
     return nueva_cuadricula
