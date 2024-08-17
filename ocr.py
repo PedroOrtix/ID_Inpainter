@@ -197,9 +197,9 @@ def ajustar_temperatura(imagen, ajuste):
     
     return imagen_ajustada
         
-def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
+def comparar_imagenes(image_path1, image_path2, coordinates, save_path = False, adjust_temp = False):
     """
-    Recorta una parte específica de dos imágenes basándose en las mismas coordenadas 
+    Recorta y ajusta la temperatura de dos imágenes basándose en las mismas coordenadas 
     y muestra las imágenes recortadas una al lado de la otra para comparación.
 
     Args:
@@ -207,13 +207,14 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
     - image_path2 (str): Ruta de la segunda imagen.
     - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
                           [x1, y1, x2, y2, x3, y3, x4, y4]
+    - save_path (str, optional): Ruta para guardar las imágenes recortadas. Si no se proporciona, no se guarda nada.
 
     Returns:
     - comparison_image (PIL.Image): Imagen combinada mostrando ambas recortes lado a lado.
     """
     # Cargar imágenes usando OpenCV
-    image1 = cv2.imread(image_path1)
-    image2 = cv2.imread(image_path2)
+    imagen_original = cv2.imread(image_path1)
+    imagen_modificada = cv2.imread(image_path2)
 
     # Extraer coordenadas
     x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
@@ -225,30 +226,38 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path=None):
     bottom = max(y1, y2, y3, y4)
 
     # Recortar ambas imágenes usando el bounding box
-    cropped_image1 = image1[top:bottom, left:right]
-    cropped_image2 = image2[top:bottom, left:right]
-    
-    # Calcular la diferencia de temperatura
-    temp1 = calcular_temperatura(cropped_image1)
-    temp2 = calcular_temperatura(cropped_image2)
-    temp_diff = temp2 - temp1
-    
-    # Ajustar la temperatura de la segunda imagen para igualarla a la primera
-    adjusted_image2 = ajustar_temperatura(cropped_image2, -temp_diff)
-    
-    # Convertir imágenes a formato PIL para la combinación final
-    cropped_image1_pil = Image.fromarray(cv2.cvtColor(cropped_image1, cv2.COLOR_BGR2RGB))
-    adjusted_image2_pil = Image.fromarray(cv2.cvtColor(adjusted_image2, cv2.COLOR_BGR2RGB))
+    imagen_original_cropped = imagen_original[top:bottom, left:right]
+    imagen_modificada_cropped = imagen_modificada[top:bottom, left:right]
+
+    if adjust_temp:
+        # Calcular las temperaturas
+        temp_original = calcular_temperatura(imagen_original_cropped)
+        temp_modificada = calcular_temperatura(imagen_modificada_cropped)
+
+        # Calcular la diferencia de temperatura
+        diferencia_temperatura = temp_original - temp_modificada
+
+        # Ajustar la temperatura de la imagen modificada para igualarla a la original
+        imagen_ajustada = ajustar_temperatura(imagen_modificada_cropped, diferencia_temperatura)
+
+        # Convertir imágenes ajustadas a formato PIL para la combinación final
+        imagen_original_pil = Image.fromarray(cv2.cvtColor(imagen_original_cropped, cv2.COLOR_BGR2RGB))
+        imagen_ajustada_pil = Image.fromarray(cv2.cvtColor(imagen_ajustada, cv2.COLOR_BGR2RGB))
+    else:
+        # Convertir imágenes recortadas a formato PIL para la combinación final
+        imagen_original_pil = Image.fromarray(cv2.cvtColor(imagen_original_cropped, cv2.COLOR_BGR2RGB))
+        imagen_ajustada_pil = Image.fromarray(cv2.cvtColor(imagen_modificada_cropped, cv2.COLOR_BGR2RGB))
 
     # Crear una nueva imagen que combina ambas imágenes recortadas lado a lado
-    width, height = cropped_image1_pil.size
+    width, height = imagen_original_pil.size
     comparison_image = Image.new('RGB', (2 * width, height))
-    comparison_image.paste(cropped_image1_pil, (0, 0))
-    comparison_image.paste(adjusted_image2_pil, (width, 0))
+    comparison_image.paste(imagen_original_pil, (0, 0))
+    comparison_image.paste(imagen_ajustada_pil, (width, 0))
 
     if save_path:
-        cropped_image1_pil.save(f"{save_path}/{image_path1.split('/')[-1].split('.')[0]}_cropped.jpg")
-        adjusted_image2_pil.save(f"{save_path}/{image_path2.split('/')[-1].split('.')[0]}_cropped.jpg")
+        imagen_original_pil.save(f"{save_path}/{image_path1.split('/')[-1].split('.')[0]}_cropped.jpg")
+        imagen_ajustada_pil.save(f"{save_path}/{image_path2.split('/')[-1].split('.')[0]}_cropped.jpg")
+        comparison_image.save(f"{save_path}/comparison.jpg")
 
     # Devolver la imagen comparativa
     return comparison_image
