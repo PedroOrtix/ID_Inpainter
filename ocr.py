@@ -208,7 +208,8 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path = False, 
     - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
                           [x1, y1, x2, y2, x3, y3, x4, y4]
     - save_path (str, optional): Ruta para guardar las imágenes recortadas. Si no se proporciona, no se guarda nada.
-
+    - adjust_temp (bool, optional): Si es True, ajusta la temperatura de la segunda imagen para igualarla a la primera.
+    
     Returns:
     - comparison_image (PIL.Image): Imagen combinada mostrando ambas recortes lado a lado.
     """
@@ -262,7 +263,7 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path = False, 
     # Devolver la imagen comparativa
     return comparison_image
 
-def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinates):
+def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinates, adjust_temp=False):
     """
     Reemplaza una parte de la imagen original con una parte de la imagen modificada usando las mismas coordenadas.
 
@@ -271,6 +272,7 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     - modified_image_path (str): Ruta de la imagen modificada.
     - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
                         [x1, y1, x2, y2, x3, y3, x4, y4]
+    - adjust_temp (bool, optional): Si es True, ajusta la temperatura de la parte modificada para igualarla a la original.
 
     Returns:
     - combined_image (PIL.Image): Imagen resultante con la parte modificada reemplazada en la imagen original.
@@ -288,16 +290,30 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     right = max(x1, x2, x3, x4)
     bottom = max(y1, y2, y3, y4)
 
-    # Recorta la parte modificada de la imagen modificada
+    # Recorta la parte relevante de ambas imágenes
+    original_crop = original_image[top:bottom, left:right]
     modified_crop = modified_image[top:bottom, left:right]
 
-    # Pega el recorte de la imagen modificada en la imagen original
-    original_image[top:bottom, left:right] = modified_crop
-    
-    # Convierte la imagen de nuevo a formato RGB
-    original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+    if adjust_temp:
+        # Calcular las temperaturas
+        temp_original = calcular_temperatura(original_crop)
+        temp_modificada = calcular_temperatura(modified_crop)
 
-    return original_image
+        # Calcular la diferencia de temperatura
+        diferencia_temperatura = temp_original - temp_modificada
+
+        # Ajustar la temperatura de la imagen modificada
+        modified_crop_adjusted = ajustar_temperatura(modified_crop, diferencia_temperatura)
+    else:
+        modified_crop_adjusted = modified_crop
+
+    # Reemplaza la parte de la imagen original con la parte ajustada/modificada
+    original_image[top:bottom, left:right] = modified_crop_adjusted
+
+    # Convierte la imagen de nuevo a formato RGB para PIL
+    combined_image = Image.fromarray(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+
+    return combined_image
 
 def convert_paddle_to_easyocr(paddle_result):
     """

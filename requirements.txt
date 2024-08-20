@@ -1,6 +1,7 @@
 numpy
 regex
 tqdm
+prettytable
 opencv-python
 paddlepaddle==2.6.1
 paddleocr==2.8.1
