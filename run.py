@@ -91,7 +91,7 @@ def process_image(palabra,
     # reason: para que el usuario pueda ver las palabras detectadas y elegir la que desea reemplazar
     # el modelo ocr puede detectar en la nueva imagen recortada palabras que no estaban en la imagen original
     lista_elementos_detectados = []
-    for bound in bounds:
+    for bound in bounds_resized:
         lista_elementos_detectados.append(bound[1])
     
     dict_elems = separar_cadenas(lista_elementos_detectados)

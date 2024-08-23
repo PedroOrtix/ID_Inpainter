@@ -18,7 +18,7 @@ tokenizer = CLIPTokenizer.from_pretrained('runwayml/stable-diffusion-v1-5', subf
 
 vae = AutoencoderKL.from_pretrained('runwayml/stable-diffusion-v1-5', subfolder="vae").half().cuda()
 
-unet = UNet2DConditionModel.from_pretrained(    'JingyeChen22/textdiffuser2-full-ft-inpainting', subfolder="unet").half().cuda()
+unet = UNet2DConditionModel.from_pretrained('JingyeChen22/textdiffuser2-full-ft-inpainting', subfolder="unet").half().cuda()
 
 scheduler = DDPMScheduler.from_pretrained('runwayml/stable-diffusion-v1-5', subfolder="scheduler") 
 

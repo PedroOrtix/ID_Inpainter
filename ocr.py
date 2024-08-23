@@ -115,7 +115,7 @@ def stitch(images):
     return stitched
 
 
-def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
+def recortar_imagen(lista_palabras, palabra, img_array, ancho=512, alto=512):
     '''
     Recorta una imagen alrededor de una palabra específica y devuelve las coordenadas relativas.
 
@@ -123,15 +123,17 @@ def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
         lista_palabras (list): Lista de palabras detectadas en la imagen. (easyocr output)
         palabra (str): Palabra a recortar.
         img_array (np.array): Array de la imagen.
-        nueva_dimension (int): Dimensión de la imagen recortada.
+        ancho (int): Ancho de la imagen recortada.
+        alto (int): Alto de la imagen recortada.
 
     Returns:
         imagen_recortada (np.array): La imagen recortada.
         (x_min, y_min, x_max, y_max) (tuple): Coordenadas relativas a la imagen original.
     '''
     
-    altura, anchura, _ = img_array.shape
-    mitad_dimension = nueva_dimension // 2
+    altura_img, anchura_img, _ = img_array.shape
+    mitad_ancho = ancho // 2
+    mitad_alto = alto // 2
     
     for detection in lista_palabras:
         if detection[1] == palabra:
@@ -147,24 +149,24 @@ def recortar_imagen(lista_palabras, palabra, img_array, nueva_dimension=512):
             y_center = (y_min + y_max) / 2
             
             # Calcular límites
-            x_min = int(x_center - mitad_dimension)
-            x_max = int(x_center + mitad_dimension)
-            y_min = int(y_center - mitad_dimension)
-            y_max = int(y_center + mitad_dimension)
+            x_min = int(x_center - mitad_ancho)
+            x_max = int(x_center + mitad_ancho)
+            y_min = int(y_center - mitad_alto)
+            y_max = int(y_center + mitad_alto)
             
             # Asegurar que los límites estén dentro de la imagen
             if x_min < 0:
                 x_min = 0
-                x_max = min(nueva_dimension, anchura)
-            if x_max > anchura:
-                x_max = anchura
-                x_min = max(0, anchura - nueva_dimension)
+                x_max = min(ancho, anchura_img)
+            if x_max > anchura_img:
+                x_max = anchura_img
+                x_min = max(0, anchura_img - ancho)
             if y_min < 0:
                 y_min = 0
-                y_max = min(nueva_dimension, altura)
-            if y_max > altura:
-                y_max = altura
-                y_min = max(0, altura - nueva_dimension)
+                y_max = min(alto, altura_img)
+            if y_max > altura_img:
+                y_max = altura_img
+                y_min = max(0, altura_img - alto)
             
             # Recortar la imagen
             imagen_recortada = img_array[y_min:y_max, x_min:x_max]
