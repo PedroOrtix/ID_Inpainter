@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -383,3 +383,62 @@ def recalcular_cuadricula_rotada(cuadricula, palabra_original, palabra_objetivo)
     nueva_cuadricula = [p1.tolist(), p2_nuevo.tolist(), p3_nuevo.tolist(), p4.tolist()]
     
     return nueva_cuadricula
+
+def juntar_imagenes_vertical(imagen_upper, imagen_lower):
+    '''
+    Combina dos imágenes verticalmente (una encima de otra).
+
+    Args:
+        imagen_upper (PIL.Image): Imagen que se colocará en la parte superior.
+        imagen_lower (PIL.Image): Imagen que se colocará en la parte inferior.
+
+    Returns:
+        imagen_combined (PIL.Image): Imagen resultante de combinar ambas imágenes verticalmente.
+    '''
+    
+    # Obtener dimensiones de las imágenes
+    ancho_upper, alto_upper = imagen_upper.size
+    ancho_lower, alto_lower = imagen_lower.size
+    
+    # Definir el ancho y el alto de la imagen combinada
+    ancho_combined = max(ancho_upper, ancho_lower)
+    alto_combined = alto_upper + alto_lower
+    
+    # Crear una nueva imagen con el tamaño combinado
+    imagen_combined = Image.new('RGB', (ancho_combined, alto_combined))
+    
+    # Pegar la imagen superior
+    imagen_combined.paste(imagen_upper, (0, 0))
+    
+    # Pegar la imagen inferior debajo de la superior
+    imagen_combined.paste(imagen_lower, (0, alto_upper))
+    
+    return imagen_combined
+
+def rellenar_imagen_uniformemente(imagen_pil, dimensiones_objetivo, color_relleno=(255, 255, 255)):
+    """
+    Rellena una imagen para alcanzar una dimensión específica de manera uniforme por los bordes.
+
+    Args:
+    - imagen_pil (PIL.Image): Imagen de entrada como objeto PIL.
+    - dimensiones_objetivo (tuple): Dimensiones deseadas en formato (ancho, alto).
+    - color_relleno (tuple): Color de relleno en formato RGB. Por defecto es blanco (255, 255, 255).
+
+    Returns:
+    - imagen_rellena (PIL.Image): Imagen rellenada con las dimensiones especificadas.
+    """
+    
+    # Obtener dimensiones de la imagen original
+    ancho_original, alto_original = imagen_pil.size
+    ancho_objetivo, alto_objetivo = dimensiones_objetivo
+    
+    # Calcular los márgenes que se necesitan para centrar la imagen
+    margen_izquierdo = (ancho_objetivo - ancho_original) // 2
+    margen_superior = (alto_objetivo - alto_original) // 2
+    margen_derecho = ancho_objetivo - ancho_original - margen_izquierdo
+    margen_inferior = alto_objetivo - alto_original - margen_superior
+    
+    # Añadir márgenes para rellenar la imagen
+    imagen_rellena = ImageOps.expand(imagen_pil, border=(margen_izquierdo, margen_superior, margen_derecho, margen_inferior), fill=color_relleno)
+    
+    return imagen_rellena
