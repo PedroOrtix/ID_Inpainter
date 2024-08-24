@@ -7,12 +7,14 @@ from paddleocr import PaddleOCR
 
 import ocr
 from ocr import recalcular_cuadricula_rotada
+from ocr import juntar_imagenes_vertical, rellenar_imagen_uniformemente
+# from ocr import recortar_imagen_uniformemente
 # from ocr import comparar_imagenes
 # from ocr import reemplazar_parte_imagen
 
 from utils import separar_cadenas, mostrar_diccionario_ascii
 
-def simple_inpaint(image, bounds, word, slider_step=30, slider_guidance=1.5, slider_batch=6):
+def simple_inpaint(image, bounds, word, slider_step=30, slider_guidance=2, slider_batch=6):
     """
     Perform inpainting on the given image using the specified bounds and word.
     Args:
@@ -40,6 +42,8 @@ def process_image(palabra,
                     replace, 
                     bounds, 
                     img_array,
+                    height=512,
+                    weight=512,
                     slider_step=30,
                     slider_guidance=2,
                     slider_batch=6,
@@ -74,9 +78,17 @@ def process_image(palabra,
         The original bounding box coordinates of the word in the image
     """
     # Step 1: Resize and crop the image based on the bounding box and the word to be replaced
-    img_resized, coordenadas_originales = ocr.recortar_imagen(bounds, palabra, img_array, nueva_dimension=512)
+    img_resized, coordenadas_originales = ocr.recortar_imagen(bounds, palabra, img_array, alto=height, ancho=weight)
     img_pil = Image.fromarray(img_resized).convert('RGB')
-    
+    # juntamos la misma imagen verticalmente para que sea cuadrada junto al papping en blanco
+    # unicamente cuando el doble del alto sea menor que que 512px que lo que admite el modelo
+    if height < 512:
+        img_pil = juntar_imagenes_vertical(img_pil, rellenar_imagen_uniformemente(img_pil, 512, 512))
+
+    # dimesion de la imagen nueva con la adición vertical para futura restauración del padding
+    # dim_img_pil = img_pil.size # comentado por ahora
+    img_pil = rellenar_imagen_uniformemente(img_pil, dimensiones_objetivo=(512, 512))
+        
     # Save the cropped and resized image for reference (optional)
     if save_intermediate_images:
         img_pil.save("images/imagen_dni_recortada.jpg")
@@ -102,7 +114,10 @@ def process_image(palabra,
     palabra = input()
 
     # Step 3: Find the bounding box that matches the word to be replaced
-    right_bounds = [bound for bound in bounds_resized if bound[1] == palabra]
+    # buscar mejor solución para encontrar la palabra en la lista de palabras detectadas, ya que se puede repetir
+    # debido a la posible duplicidad de palabras en la imagen
+    # TEMPORAL!!!
+    right_bounds = [[bound for bound in bounds_resized if bound[1] == palabra][0]]
 
     # Step 4: Recalculate the bounding box if necessary (e.g., if the replacement word is longer)
     if palabra.isalpha() and len(palabra) < len(replace.strip()):
