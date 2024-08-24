@@ -265,36 +265,36 @@ def comparar_imagenes(image_path1, image_path2, coordinates, save_path = False, 
     # Devolver la imagen comparativa
     return comparison_image
 
-def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinates, adjust_temp=False):
+def reemplazar_parte_imagen(original_image_pil, modified_image_pil, coordinates, adjust_temp=False):
     """
     Reemplaza una parte de la imagen original con una parte de la imagen modificada usando las mismas coordenadas.
 
     Args:
-    - original_image_path (str): Ruta de la imagen original.
-    - modified_image_path (str): Ruta de la imagen modificada.
+    - original_image_pil (PIL.Image): Imagen original como objeto PIL.
+    - modified_image_pil (PIL.Image): Imagen modificada como objeto PIL.
     - coordinates (list): Lista de 8 valores que representan las coordenadas de la región de interés.
-                        [x1, y1, x2, y2, x3, y3, x4, y4]
+                          [x1, y1, x2, y2, x3, y3, x4, y4]
     - adjust_temp (bool, optional): Si es True, ajusta la temperatura de la parte modificada para igualarla a la original.
 
     Returns:
     - combined_image (PIL.Image): Imagen resultante con la parte modificada reemplazada en la imagen original.
     """
-    # Abre las imágenes original y modificada
-    original_image = cv2.imread(original_image_path)
-    modified_image = cv2.imread(modified_image_path)
+    # Convertir las imágenes PIL a arrays de numpy para usarlas con OpenCV
+    original_image_cv2 = cv2.cvtColor(np.array(original_image_pil), cv2.COLOR_RGB2BGR)
+    modified_image_cv2 = cv2.cvtColor(np.array(modified_image_pil), cv2.COLOR_RGB2BGR)
 
-    # Extrae las coordenadas
+    # Extraer las coordenadas
     x1, y1, x2, y2, x3, y3, x4, y4 = coordinates
 
-    # Calcula el rectángulo de recorte
+    # Calcular el rectángulo de recorte
     left = min(x1, x2, x3, x4)
     top = min(y1, y2, y3, y4)
     right = max(x1, x2, x3, x4)
     bottom = max(y1, y2, y3, y4)
 
-    # Recorta la parte relevante de ambas imágenes
-    original_crop = original_image[top:bottom, left:right]
-    modified_crop = modified_image[top:bottom, left:right]
+    # Recortar la parte relevante de ambas imágenes
+    original_crop = original_image_cv2[top:bottom, left:right]
+    modified_crop = modified_image_cv2[top:bottom, left:right]
 
     if adjust_temp:
         # Calcular las temperaturas
@@ -309,11 +309,11 @@ def reemplazar_parte_imagen(original_image_path, modified_image_path, coordinate
     else:
         modified_crop_adjusted = modified_crop
 
-    # Reemplaza la parte de la imagen original con la parte ajustada/modificada
-    original_image[top:bottom, left:right] = modified_crop_adjusted
+    # Reemplazar la parte de la imagen original con la parte ajustada/modificada
+    original_image_cv2[top:bottom, left:right] = modified_crop_adjusted
 
-    # Convierte la imagen de nuevo a formato RGB para PIL
-    combined_image = Image.fromarray(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+    # Convertir la imagen de nuevo a formato RGB para PIL
+    combined_image = Image.fromarray(cv2.cvtColor(original_image_cv2, cv2.COLOR_BGR2RGB))
 
     return combined_image
 
@@ -442,3 +442,36 @@ def rellenar_imagen_uniformemente(imagen_pil, dimensiones_objetivo, color_rellen
     imagen_rellena = ImageOps.expand(imagen_pil, border=(margen_izquierdo, margen_superior, margen_derecho, margen_inferior), fill=color_relleno)
     
     return imagen_rellena
+
+def recortar_imagen_uniformemente(imagen_pil, color_relleno=(255, 255, 255)):
+    """
+    Recorta los bordes blancos de una imagen, eliminando el relleno de color blanco (u otro color especificado).
+
+    Args:
+    - imagen_pil (PIL.Image): Imagen de entrada como objeto PIL.
+    - color_relleno (tuple): Color de relleno en formato RGB que se desea recortar. Por defecto es blanco (255, 255, 255).
+
+    Returns:
+    - imagen_recortada (PIL.Image): Imagen sin los bordes blancos.
+    - box (tuple): Coordenadas del recorte en formato (left, upper, right, lower).
+    """
+    
+    # Convertir la imagen a un array de numpy
+    imagen_np = np.array(imagen_pil)
+    
+    # Crear una máscara donde los píxeles que no son del color de relleno se marquen como True
+    mask = np.any(imagen_np != color_relleno, axis=-1)
+    
+    # Encontrar los límites de los píxeles no blancos
+    if mask.any():
+        y_min, y_max = np.where(mask)[0][[0, -1]]
+        x_min, x_max = np.where(mask)[1][[0, -1]]
+        
+        # Recortar la imagen usando estos límites
+        imagen_recortada = imagen_pil.crop((x_min, y_min, x_max + 1, y_max + 1))
+        
+        # Retornar la imagen recortada y las coordenadas del recorte
+        return imagen_recortada, (x_min, y_min, x_max + 1, y_max + 1)
+    else:
+        # Si toda la imagen es del color de relleno, retornar la imagen original
+        return imagen_pil, (0, 0, imagen_pil.width, imagen_pil.height)
