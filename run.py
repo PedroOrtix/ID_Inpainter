@@ -43,7 +43,7 @@ def process_image(palabra,
                     bounds, 
                     img_array,
                     height=512,
-                    weight=512,
+                    width=512,
                     slider_step=30,
                     slider_guidance=2,
                     slider_batch=6,
@@ -63,6 +63,16 @@ def process_image(palabra,
         The bounding box coordinates of the word in the original image.
     img_array : np.ndarray
         The image array where the word is located.
+    height : int, optional
+        The height of the resized image. Default is 512.
+    width : int, optional
+        The width of the resized image. Default is 512.
+    slider_step : int, optional
+        The step size for the slider. Default is 30.
+    slider_guidance : float, optional
+        The guidance value for the slider. Default is 2.
+    slider_batch : int, optional
+        The batch size for the slider. Default is 6.
     show_plot : bool, optional
         If True, displays the modified images in a grid. Default is False.
     save_intermediate_images : bool, optional
@@ -78,12 +88,12 @@ def process_image(palabra,
         The original bounding box coordinates of the word in the image
     """
     # Step 1: Resize and crop the image based on the bounding box and the word to be replaced
-    img_resized, coordenadas_originales = ocr.recortar_imagen(bounds, palabra, img_array, alto=height, ancho=weight)
+    img_resized, coordenadas_originales = ocr.recortar_imagen(bounds, palabra, img_array, alto=height, ancho=width)
     img_pil = Image.fromarray(img_resized).convert('RGB')
     # juntamos la misma imagen verticalmente para que sea cuadrada junto al papping en blanco
     # unicamente cuando el doble del alto sea menor que que 512px que lo que admite el modelo
     if height < 512:
-        img_pil = juntar_imagenes_vertical(img_pil, rellenar_imagen_uniformemente(img_pil, 512, 512))
+        img_pil = juntar_imagenes_vertical(img_pil, img_pil)
 
     # dimesion de la imagen nueva con la adición vertical para futura restauración del padding
     # dim_img_pil = img_pil.size # comentado por ahora
