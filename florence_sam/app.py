@@ -67,14 +67,14 @@ def on_mode_dropdown_change(text):
 @torch.autocast(device_type="cuda", dtype=torch.bfloat16)
 def process_image(
     mode_dropdown, image_input, text_input
-) -> Tuple[Optional[Image.Image], Optional[str]]:
+) -> Optional[Image.Image]:
     if not image_input:
         gr.Info("Please upload an image.")
-        return None, None
+        return None
 
     if not text_input:
         gr.Info("Please enter a text prompt.")
-        return None, None
+        return None
 
     texts = [prompt.strip() for prompt in text_input.split(",")]
     detections_list = []
@@ -97,7 +97,7 @@ def process_image(
 
     detections = sv.Detections.merge(detections_list)
     detections = run_sam_inference(SAM_IMAGE_MODEL, image_input, detections)
-    return annotate_image(image_input, detections), None
+    return annotate_image(image_input, detections)
 
 with gr.Blocks() as demo:
     gr.Markdown(MARKDOWN)

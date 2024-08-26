@@ -13,6 +13,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 FLORENCE_MODEL, FLORENCE_PROCESSOR = load_florence_model(device=DEVICE)
 SAM_IMAGE_MODEL = load_sam_image_model(device=DEVICE)
 
+# Definir el pipeline fuera de la función
+pipe = StableDiffusionInpaintPipeline.from_pretrained(
+    "runwayml/stable-diffusion-inpainting",
+    torch_dtype=torch.float16
+).to(DEVICE)
+
 def process_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
     # Cargar la imagen
     image = Image.open(img_path).convert("RGB")
@@ -57,11 +63,8 @@ def process_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str
     return mask_coordinates, masked_image, mask_image
 
 def remove_masked_element(original_image: Image.Image, mask_image: Image.Image) -> Image.Image:
-    # Cargar el modelo de inpainting de Stable Diffusion 1.5
-    pipe = StableDiffusionInpaintPipeline.from_pretrained(
-        "runwayml/stable-diffusion-inpainting",
-        torch_dtype=torch.float16
-    ).to(DEVICE)
+    # Guardar las dimensiones originales
+    original_size = original_image.size
 
     # Redimensionar las imágenes si es necesario
     width, height = original_image.size
@@ -80,7 +83,11 @@ def remove_masked_element(original_image: Image.Image, mask_image: Image.Image) 
         guidance_scale=0  # Desactivar la guía del prompt
     ).images[0]
 
+    # Redimensionar el resultado a las dimensiones originales
+    result = result.resize(original_size)
+
     return result
+
 
 # Ejemplo de uso:
 # mask_coords, masked_img, mask_img = process_image_with_prompt("ruta/a/la/imagen.jpg", "gato")
