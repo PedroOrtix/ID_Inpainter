@@ -13,8 +13,9 @@ accelerate==0.22.0
 git+https://github.com/JingyeChen/diffusers_td2.git
 sentencepiece
 torch==2.0.1
-langchain==0.2.13
-# langchain-community==0.2.12
-langchain-ollama==0.1.1
+supervision
+samv2
+timm
+einops
 # only for colab
 # "jax[cuda12_pip]==0.4.23" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html -q
