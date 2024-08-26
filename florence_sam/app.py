@@ -130,10 +130,10 @@ with gr.Blocks() as demo:
             image_processing_text_input_component
         ],
         outputs=[
-            image_processing_image_output_component,
-            None
+            image_processing_image_output_component
         ]
     )
+
     image_processing_text_input_component.submit(
         fn=process_image,
         inputs=[
@@ -142,8 +142,7 @@ with gr.Blocks() as demo:
             image_processing_text_input_component
         ],
         outputs=[
-            image_processing_image_output_component,
-            None
+            image_processing_image_output_component
         ]
     )
 
