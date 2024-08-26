@@ -17,5 +17,6 @@ supervision
 samv2
 timm
 einops
+diffusers
 # only for colab
 # "jax[cuda12_pip]==0.4.23" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html -q
