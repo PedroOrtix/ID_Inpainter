@@ -1,3 +1,6 @@
 *.jpg
 *.png
 *.pt
+/venv
+/.idea
+/tmp
