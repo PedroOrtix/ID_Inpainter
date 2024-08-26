@@ -9,10 +9,8 @@ import torch
 from PIL import Image
 
 from utils.florence import load_florence_model, run_florence_inference, \
-    FLORENCE_DETAILED_CAPTION_TASK, \
-    FLORENCE_CAPTION_TO_PHRASE_GROUNDING_TASK, FLORENCE_OPEN_VOCABULARY_DETECTION_TASK
-from utils.modes import IMAGE_INFERENCE_MODES, IMAGE_OPEN_VOCABULARY_DETECTION_MODE, \
-    IMAGE_CAPTION_GROUNDING_MASKS_MODE
+    FLORENCE_OPEN_VOCABULARY_DETECTION_TASK
+from utils.modes import IMAGE_INFERENCE_MODES, IMAGE_OPEN_VOCABULARY_DETECTION_MODE
 from utils.sam import load_sam_image_model, run_sam_inference
 
 MARKDOWN = """
@@ -62,7 +60,6 @@ def annotate_image(image, detections):
 def on_mode_dropdown_change(text):
     return [
         gr.Textbox(visible=text == IMAGE_OPEN_VOCABULARY_DETECTION_MODE),
-        gr.Textbox(visible=text == IMAGE_CAPTION_GROUNDING_MASKS_MODE),
     ]
 
 
@@ -75,50 +72,20 @@ def process_image(
         gr.Info("Please upload an image.")
         return None, None
 
-    if mode_dropdown == IMAGE_OPEN_VOCABULARY_DETECTION_MODE:
-        if not text_input:
-            gr.Info("Please enter a text prompt.")
-            return None, None
+    if not text_input:
+        gr.Info("Please enter a text prompt.")
+        return None, None
 
-        texts = [prompt.strip() for prompt in text_input.split(",")]
-        detections_list = []
-        for text in texts:
-            _, result = run_florence_inference(
-                model=FLORENCE_MODEL,
-                processor=FLORENCE_PROCESSOR,
-                device=DEVICE,
-                image=image_input,
-                task=FLORENCE_OPEN_VOCABULARY_DETECTION_TASK,
-                text=text
-            )
-            detections = sv.Detections.from_lmm(
-                lmm=sv.LMM.FLORENCE_2,
-                result=result,
-                resolution_wh=image_input.size
-            )
-            detections = run_sam_inference(SAM_IMAGE_MODEL, image_input, detections)
-            detections_list.append(detections)
-
-        detections = sv.Detections.merge(detections_list)
-        detections = run_sam_inference(SAM_IMAGE_MODEL, image_input, detections)
-        return annotate_image(image_input, detections), None
-
-    if mode_dropdown == IMAGE_CAPTION_GROUNDING_MASKS_MODE:
+    texts = [prompt.strip() for prompt in text_input.split(",")]
+    detections_list = []
+    for text in texts:
         _, result = run_florence_inference(
             model=FLORENCE_MODEL,
             processor=FLORENCE_PROCESSOR,
             device=DEVICE,
             image=image_input,
-            task=FLORENCE_DETAILED_CAPTION_TASK
-        )
-        caption = result[FLORENCE_DETAILED_CAPTION_TASK]
-        _, result = run_florence_inference(
-            model=FLORENCE_MODEL,
-            processor=FLORENCE_PROCESSOR,
-            device=DEVICE,
-            image=image_input,
-            task=FLORENCE_CAPTION_TO_PHRASE_GROUNDING_TASK,
-            text=caption
+            task=FLORENCE_OPEN_VOCABULARY_DETECTION_TASK,
+            text=text
         )
         detections = sv.Detections.from_lmm(
             lmm=sv.LMM.FLORENCE_2,
@@ -126,8 +93,11 @@ def process_image(
             resolution_wh=image_input.size
         )
         detections = run_sam_inference(SAM_IMAGE_MODEL, image_input, detections)
-        return annotate_image(image_input, detections), caption
+        detections_list.append(detections)
 
+    detections = sv.Detections.merge(detections_list)
+    detections = run_sam_inference(SAM_IMAGE_MODEL, image_input, detections)
+    return annotate_image(image_input, detections), None
 
 with gr.Blocks() as demo:
     gr.Markdown(MARKDOWN)
@@ -151,8 +121,6 @@ with gr.Blocks() as demo:
             with gr.Column():
                 image_processing_image_output_component = gr.Image(
                     type='pil', label='Image output')
-                image_processing_text_output_component = gr.Textbox(
-                    label='Caption output', visible=False)
 
     image_processing_submit_button_component.click(
         fn=process_image,
@@ -163,7 +131,7 @@ with gr.Blocks() as demo:
         ],
         outputs=[
             image_processing_image_output_component,
-            image_processing_text_output_component
+            None
         ]
     )
     image_processing_text_input_component.submit(
@@ -175,15 +143,7 @@ with gr.Blocks() as demo:
         ],
         outputs=[
             image_processing_image_output_component,
-            image_processing_text_output_component
-        ]
-    )
-    image_processing_mode_dropdown_component.change(
-        on_mode_dropdown_change,
-        inputs=[image_processing_mode_dropdown_component],
-        outputs=[
-            image_processing_text_input_component,
-            image_processing_text_output_component
+            None
         ]
     )
 
