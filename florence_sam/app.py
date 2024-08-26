@@ -187,4 +187,4 @@ with gr.Blocks() as demo:
         ]
     )
 
-demo.launch(debug=False, show_error=True)
+demo.launch(debug=False, show_error=True, share=True)
