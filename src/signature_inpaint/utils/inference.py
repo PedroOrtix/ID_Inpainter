@@ -6,18 +6,21 @@ from typing import Tuple, List, Dict
 
 from .florence import load_florence_model, run_florence_inference, FLORENCE_OPEN_VOCABULARY_DETECTION_TASK
 from .sam import load_sam_image_model, run_sam_inference
-from diffusers import StableDiffusionInpaintPipeline
+from diffusers import AutoPipelineForInpainting
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 FLORENCE_MODEL, FLORENCE_PROCESSOR = load_florence_model(device=DEVICE)
 SAM_IMAGE_MODEL = load_sam_image_model(device=DEVICE)
 
-# Definir el pipeline fuera de la función
-pipe = StableDiffusionInpaintPipeline.from_pretrained(
-    "runwayml/stable-diffusion-inpainting",
-    torch_dtype=torch.float16
+# Reemplazar la definición del pipeline
+pipe = AutoPipelineForInpainting.from_pretrained(
+    "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+    torch_dtype=torch.float16,
+    variant="fp16"
 ).to(DEVICE)
+pipe.enable_model_cpu_offload()
+# pipe.enable_xformers_memory_efficient_attention()
 
 def process_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
     # Cargar la imagen
@@ -66,8 +69,8 @@ def remove_masked_element(original_image: Image.Image,
                         mask_image: Image.Image, 
                         prompt: str = "background",
                         negative_prompt: str = "",
-                        guidance_scale: float = 7,
-                        strength: float = 0.5,
+                        guidance_scale: float = 7.5,
+                        strength: float = 1,
                         num_inference_steps: int = 30) -> Image.Image:
     
     # Guardar las dimensiones originales
@@ -82,6 +85,7 @@ def remove_masked_element(original_image: Image.Image,
         mask_image = mask_image.resize((width, height))
 
     # Realizar el inpainting para eliminar el elemento
+    generator = torch.Generator(DEVICE).manual_seed(92)
     inpainted_image = pipe(
         prompt=prompt,
         negative_prompt=negative_prompt,
@@ -89,8 +93,13 @@ def remove_masked_element(original_image: Image.Image,
         mask_image=mask_image,
         num_inference_steps=num_inference_steps,
         guidance_scale=guidance_scale,
-        strength=strength
+        strength=strength,
+        generator=generator
     ).images[0]
+
+    # Asegurarse de que todas las imágenes tengan el mismo tamaño
+    inpainted_image = inpainted_image.resize(original_image.size)
+    mask_image = mask_image.resize(original_image.size)
 
     # Combinar la imagen original con la región inpaintada
     result = Image.new("RGB", original_image.size)
