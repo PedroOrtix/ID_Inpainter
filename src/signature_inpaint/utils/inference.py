@@ -64,8 +64,10 @@ def process_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str
 
 def remove_masked_element(original_image: Image.Image, 
                         mask_image: Image.Image, 
-                        prompt: str = "background", 
+                        prompt: str = "background",
+                        negative_prompt: str = "",
                         guidance_scale: float = 7,
+                        strength: float = 0.5,
                         num_inference_steps: int = 30) -> Image.Image:
     
     # Guardar las dimensiones originales
@@ -80,16 +82,24 @@ def remove_masked_element(original_image: Image.Image,
         mask_image = mask_image.resize((width, height))
 
     # Realizar el inpainting para eliminar el elemento
-    result = pipe(
+    inpainted_image = pipe(
         prompt=prompt,
+        negative_prompt=negative_prompt,
         image=original_image,
         mask_image=mask_image,
         num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale
+        guidance_scale=guidance_scale,
+        strength=strength
     ).images[0]
 
-    # Redimensionar el resultado a las dimensiones originales
-    result = result.resize(original_size)
+    # Combinar la imagen original con la región inpaintada
+    result = Image.new("RGB", original_image.size)
+    result.paste(original_image, (0, 0))
+    result.paste(inpainted_image, (0, 0), mask_image)
+
+    # Redimensionar el resultado a las dimensiones originales si es necesario
+    if result.size != original_size:
+        result = result.resize(original_size)
 
     return result
 
