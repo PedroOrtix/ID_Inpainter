@@ -8,7 +8,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler,UNet2DConditionModel
 from tqdm import tqdm
 from PIL import Image, ImageDraw
-from inpaint_functions import format_prompt, to_tensor, add_tokens
+from src.text_inpaint.inpaint_functions import format_prompt, to_tensor, add_tokens
 
 
 #### import diffusion models

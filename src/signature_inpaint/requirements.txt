@@ -8,3 +8,4 @@ gradio
 supervision
 opencv-python
 pytest
+diffusers

@@ -1,18 +1,18 @@
-from td_inpaint import inpaint
-from inpaint_functions import parse_bounds
+from src.text_inpaint.td_inpaint import inpaint
+from src.text_inpaint.inpaint_functions import parse_bounds
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from paddleocr import PaddleOCR
 
-import ocr
-from ocr import recalcular_cuadricula_rotada
-from ocr import juntar_imagenes_vertical, rellenar_imagen_uniformemente
+import src.text_inpaint.ocr as ocr
+from src.text_inpaint.ocr import recalcular_cuadricula_rotada
+from src.text_inpaint.ocr import juntar_imagenes_vertical, rellenar_imagen_uniformemente
 # from ocr import recortar_imagen_uniformemente
 # from ocr import comparar_imagenes
 # from ocr import reemplazar_parte_imagen
 
-from utils import separar_cadenas, mostrar_diccionario_ascii
+from src.text_inpaint.utils import separar_cadenas, mostrar_diccionario_ascii
 
 def simple_inpaint(image, bounds, word, slider_step=30, slider_guidance=2, slider_batch=6):
     """
