@@ -23,7 +23,38 @@ simple_lama = SimpleLama()
 #     torch_dtype=torch.float16
 # ).to(DEVICE)
 
-def process_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
+def detect_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, List[float]]], Image.Image]:
+    # Cargar la imagen
+    image = Image.open(img_path).convert("RGB")
+    
+    # Ejecutar la inferencia de Florence
+    _, result = run_florence_inference(
+        model=FLORENCE_MODEL,
+        processor=FLORENCE_PROCESSOR,
+        device=DEVICE,
+        image=image,
+        task=FLORENCE_OPEN_VOCABULARY_DETECTION_TASK,
+        text=prompt
+    )
+    
+    # Convertir los resultados a detecciones de Supervision
+    detections = sv.Detections.from_lmm(
+        lmm=sv.LMM.FLORENCE_2,
+        result=result,
+        resolution_wh=image.size
+    )
+    
+    # Preparar los resultados
+    bbox_coordinates = [{"bbox": xyxy.tolist()} for xyxy in detections.xyxy]
+    
+    # Crear la imagen con bounding boxes
+    annotated_image = image.copy()
+    box_annotator = sv.BoxAnnotator()
+    annotated_image = box_annotator.annotate(scene=np.array(annotated_image), detections=detections)
+    
+    return bbox_coordinates, Image.fromarray(annotated_image)
+
+def segment_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
     # Cargar la imagen
     image = Image.open(img_path).convert("RGB")
     
