@@ -11,8 +11,8 @@ from diffusers import StableDiffusionInpaintPipeline
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# FLORENCE_MODEL, FLORENCE_PROCESSOR = load_florence_model(device=DEVICE)
-# SAM_IMAGE_MODEL = load_sam_image_model(device=DEVICE)
+FLORENCE_MODEL, FLORENCE_PROCESSOR = load_florence_model(device=DEVICE)
+SAM_IMAGE_MODEL = load_sam_image_model(device=DEVICE)
 
 # Inicializar SimpleLama (esto debería hacerse una sola vez, fuera de la función)
 simple_lama = SimpleLama()
