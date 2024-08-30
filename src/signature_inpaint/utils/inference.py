@@ -23,9 +23,9 @@ simple_lama = SimpleLama()
 #     torch_dtype=torch.float16
 # ).to(DEVICE)
 
-def detect_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, List[float]]], Image.Image]:
+def detect_image_with_prompt(img_dict: Dict[str, Image.Image]) -> Tuple[List[Dict[str, List[float]]], Image.Image]:
     # Cargar la imagen
-    image = Image.open(img_path).convert("RGB")
+    image = img_dict["background"].convert("RGB")
     
     # Ejecutar la inferencia de Florence
     _, result = run_florence_inference(
@@ -34,7 +34,7 @@ def detect_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str,
         device=DEVICE,
         image=image,
         task=FLORENCE_OPEN_VOCABULARY_DETECTION_TASK,
-        text=prompt
+        text="black signature"
     )
     
     # Convertir los resultados a detecciones de Supervision
@@ -46,13 +46,10 @@ def detect_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str,
     
     # Preparar los resultados
     bbox_coordinates = [{"bbox": xyxy.tolist()} for xyxy in detections.xyxy]
+    x1, y1, x2, y2 = bbox_coordinates[0]["bbox"]
+    print("the coordinates are: x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
     
-    # Crear la imagen con bounding boxes
-    annotated_image = image.copy()
-    box_annotator = sv.BoxAnnotator()
-    annotated_image = box_annotator.annotate(scene=np.array(annotated_image), detections=detections)
-    
-    return bbox_coordinates, Image.fromarray(annotated_image)
+    return x1, y1, x2, y2
 
 def segment_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
     # Cargar la imagen
@@ -97,18 +94,16 @@ def segment_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str
     
     return mask_coordinates, masked_image, mask_image
 
-# auxiliar function to prepare the mask
+# función auxiliar para preparar la máscara
 def prepare_mask(mask):
-    mask = mask.cpu()
-
-    # Take the maximum value across channels
+    # Tomar el valor máximo a través de los canales
     mask = mask.max(dim=1, keepdim=True)[0]
     
-    # Ensure binary mask
+    # Asegurar máscara binaria
     mask = (mask > 0.5).float()
     
-    # Move back to the original device
-    mask = mask.to(DEVICE)
+    # Mover a CPU antes de convertir a numpy
+    mask = mask.cpu()
     
     return mask
 
