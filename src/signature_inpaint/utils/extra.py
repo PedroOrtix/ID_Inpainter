@@ -87,6 +87,9 @@ def update_and_cut(image, x1, y1, x2, y2):
         cropped_image = cut_image(image, x1, y1, x2, y2)
         return updated_image, cropped_image
 
+def add_template_to_image(original_image, template_image, x1, y1, x2, y2):
+    return paste_image(original_image, template_image, x1, y1, x2, y2)
+
 def process_and_add_template(image_delete: Dict[str, Image.Image], template_image: Image.Image, x1, y1, x2, y2):
     # esto en un futuro podria ser mejorado para que no se tenga que hacer esto
     image_delete = image_delete["background"]
