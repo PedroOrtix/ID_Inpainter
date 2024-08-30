@@ -51,9 +51,9 @@ def detect_image_with_prompt(img_dict: Dict[str, Image.Image]) -> Tuple[List[Dic
     
     return x1, y1, x2, y2
 
-def segment_image_with_prompt(img_path: str, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
+def segment_image_with_prompt(img: Image.Image, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
     # Cargar la imagen
-    image = Image.open(img_path).convert("RGB")
+    image = img.convert("RGB")
     
     # Ejecutar la inferencia de Florence
     _, result = run_florence_inference(

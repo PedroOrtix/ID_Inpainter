@@ -1,9 +1,12 @@
 import datetime
 import os
 import shutil
+from typing import Dict
 import uuid
 from PIL import Image, ImageDraw
 import numpy as np
+
+from .inference import segment_image_with_prompt
 
 
 def create_directory(directory_path: str) -> None:
@@ -79,5 +82,43 @@ def paste_image(original_image, template_image, x1, y1, x2, y2):
     
     return np.array(result_image)
 
-def add_template_to_image(original_image, template_image, x1, y1, x2, y2):
-    return paste_image(original_image, template_image, x1, y1, x2, y2)
+def update_and_cut(image, x1, y1, x2, y2):
+        updated_image = update_bounding_box(image, x1, y1, x2, y2)
+        cropped_image = cut_image(image, x1, y1, x2, y2)
+        return updated_image, cropped_image
+
+def process_and_add_template(image_delete: Dict[str, Image.Image], template_image: Image.Image, x1, y1, x2, y2):
+    # esto en un futuro podria ser mejorado para que no se tenga que hacer esto
+    image_delete = image_delete["background"]
+    # Recortar la firma original
+    original_signature = cut_image(image_delete, x1, y1, x2, y2)
+        
+    # Segmentar la firma original
+    _, _, mask_original = segment_image_with_prompt(original_signature, "signature")
+        
+    # Segmentar la firma del template
+    _, _, mask_template = segment_image_with_prompt(template_image, "signature")
+        
+    # Calcular la media RGB de la firma original segmentada
+    original_rgb = np.array(original_signature)
+    mask_original_np = np.array(mask_original) / 255
+    masked_original = original_rgb * mask_original_np[:,:,np.newaxis]
+    mean_rgb = np.mean(masked_original[masked_original != 0], axis=0)
+        
+    # Aplicar el color medio solo a los píxeles de la firma en el template
+    template_rgb = np.array(template_image)
+    mask_template_np = np.array(mask_template) / 255
+        
+    # Crear una máscara de 3 canales
+    mask_3channel = np.repeat(mask_template_np[:, :, np.newaxis], 3, axis=2)
+        
+    # Aplicar el color medio solo a los píxeles de la firma
+    colored_signature = mean_rgb * mask_3channel
+    template_rgb = template_rgb * (1 - mask_3channel) + colored_signature
+        
+    colored_template = Image.fromarray(template_rgb.astype(np.uint8))
+        
+    # Añadir el template coloreado a la imagen original
+    result = add_template_to_image(image_delete, colored_template, x1, y1, x2, y2)
+        
+    return result, mask_original, mask_template
