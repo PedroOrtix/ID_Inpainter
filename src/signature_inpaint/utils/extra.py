@@ -97,10 +97,10 @@ def process_and_add_template(image_delete: Dict[str, Image.Image], template_imag
     original_signature = cut_image(image_delete, x1, y1, x2, y2)
         
     # Segmentar la firma original
-    _, _, mask_original = segment_image_with_prompt(original_signature, "signature")
+    _, _, mask_original = segment_image_with_prompt(original_signature, "black signature")
         
     # Segmentar la firma del template
-    _, _, mask_template = segment_image_with_prompt(template_image, "signature")
+    _, _, mask_template = segment_image_with_prompt(template_image, "black signature")
         
     # Calcular la media RGB de la firma original segmentada
     original_rgb = np.array(original_signature)
