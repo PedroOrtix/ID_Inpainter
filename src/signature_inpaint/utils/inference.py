@@ -24,6 +24,16 @@ simple_lama = SimpleLama()
 # ).to(DEVICE)
 
 def detect_image_with_prompt(img_dict: Dict[str, Image.Image]) -> Tuple[List[Dict[str, List[float]]], Image.Image]:
+    """
+    Detecta una firma negra en una imagen y devuelve sus coordenadas.
+
+    Args:
+        img_dict (Dict[str, Image.Image]): Diccionario que contiene la imagen de fondo.
+
+    Returns:
+        Tuple[float, float, float, float]: Coordenadas (x1, y1, x2, y2) del cuadro delimitador de la firma.
+
+    """
     # Cargar la imagen
     image = img_dict["background"].convert("RGB")
     
@@ -52,6 +62,20 @@ def detect_image_with_prompt(img_dict: Dict[str, Image.Image]) -> Tuple[List[Dic
     return x1, y1, x2, y2
 
 def segment_image_with_prompt(img: Image.Image, prompt: str) -> Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]:
+    """
+    Segmenta una imagen basándose en un prompt dado.
+
+    Args:
+        img (Image.Image): Imagen a segmentar.
+        prompt (str): Texto que describe el objeto a segmentar.
+
+    Returns:
+        Tuple[List[Dict[str, np.ndarray]], Image.Image, Image.Image]: 
+            - Lista de diccionarios con coordenadas del cuadro delimitador y máscara.
+            - Imagen con la segmentación aplicada.
+            - Imagen de la máscara.
+
+    """
     # Cargar la imagen
     image = img.convert("RGB")
     
@@ -96,6 +120,16 @@ def segment_image_with_prompt(img: Image.Image, prompt: str) -> Tuple[List[Dict[
 
 # función auxiliar para preparar la máscara
 def prepare_mask(mask):
+    """
+    Prepara una máscara para su uso en inpainting.
+
+    Args:
+        mask (torch.Tensor): Máscara de entrada.
+
+    Returns:
+        numpy.ndarray: Máscara preparada como array binario de numpy.
+
+    """
     # Tomar el valor máximo a través de los canales
     mask = mask.max(dim=1, keepdim=True)[0]
     
@@ -108,6 +142,16 @@ def prepare_mask(mask):
     return mask
 
 def remove_masked_lama(image_dict: Dict[str, Image.Image]) -> Image.Image:
+    """
+    Elimina el área enmascarada de una imagen utilizando el método SimpleLama.
+
+    Args:
+        image_dict (Dict[str, Image.Image]): Diccionario con la imagen de fondo y la capa de máscara.
+
+    Returns:
+        Image.Image: Imagen con el área enmascarada eliminada y rellenada.
+
+    """
     # Get the original image and mask from the dictionary
     original_image = image_dict["background"].convert("RGB")
     mask_image = np.array(image_dict["layers"][0])
@@ -132,6 +176,22 @@ def remove_masked_sd(original_image: Image.Image,
                         strength: float = 1,
                         num_inference_steps: int = 30) -> Image.Image:
     
+    """
+    Elimina el área enmascarada de una imagen utilizando Stable Diffusion Inpainting.
+
+    Args:
+        original_image (Image.Image): Imagen original.
+        mask_image (Image.Image): Máscara que indica el área a eliminar.
+        prompt (str, optional): Prompt para guiar el inpainting. Por defecto es "background".
+        negative_prompt (str, optional): Prompt negativo para el inpainting. Por defecto es "".
+        guidance_scale (float, optional): Escala de guía para el inpainting. Por defecto es 7.
+        strength (float, optional): Fuerza del inpainting. Por defecto es 1.
+        num_inference_steps (int, optional): Número de pasos de inferencia. Por defecto es 30.
+
+    Returns:
+        Image.Image: Imagen con el área enmascarada eliminada y rellenada.
+
+    """
     # Guardar las dimensiones originales
     original_size = original_image.size
 

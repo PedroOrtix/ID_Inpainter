@@ -8,7 +8,7 @@ from src.signature_inpaint.utils.inference import (remove_masked_lama,
                                                     segment_image_with_prompt
                                                     )
 
-from src.signature_inpaint.utils.extra import (update_bounding_box, 
+from src.signature_inpaint.utils.extra import (update_bounding_box,
                                             cut_image,
                                             update_and_cut,
                                             process_and_add_template)
@@ -16,20 +16,16 @@ from src.signature_inpaint.utils.extra import (update_bounding_box,
 with gr.Blocks() as demo:
     gr.Markdown("# Inpaint with LaMa")
     with gr.Tab("Signature Inpainting"):
-        with gr.Tab("Delete"):
+        with gr.Tab("Deleting phase"):
+            image_delete = gr.ImageMask(type="pil", layers=False)
             with gr.Row():
-                image_delete = gr.ImageMask(type="pil", layers=False)
-            with gr.Row():
-                inpaint_button = gr.Button("Inpaint")
+                delete_button = gr.Button("Delete")
                 send_add_button = gr.Button("Send to Add")
             image_delete_view = gr.Image(interactive=False, type="pil", label="Image Signature Template", show_download_button=True)
-        with gr.Tab("Add"):
+        with gr.Tab("Adding phase"):
             with gr.Row():
                 with gr.Column(min_width=200):
                     image_add = gr.Image(type="pil", interactive=False, scale = 2, inputs=image_delete_view)
-                    image_add_view = gr.Image(interactive=False, type="pil", label="Image Signature Result", show_download_button=True)
-                    original_segmented = gr.Image(interactive=False, type="pil", label="Original Segmented", show_download_button=True)
-                    template_segmented = gr.Image(interactive=False, type="pil", label="Template Segmented", show_download_button=True)
                 with gr.Column(min_width=200):
                     # add text box for the 4 coordinates
                     x1 = gr.Number(label="X1")
@@ -38,11 +34,26 @@ with gr.Blocks() as demo:
                     y2 = gr.Number(label="Y2")
                     set_bounding_box = gr.Button("Set Bounding Box")
                     template_image = gr.Image(type="pil", interactive=True, scale = 2, label="Template Image")
-                    add_button = gr.Button("Add")
+        with gr.Tab("Inpainting phase"):
+            with gr.Row():
+                sig_inpaint_1 = gr.Image(type="pil", interactive=True, scale=1, label="Original Signature")
+                sig_segmented_1 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
+                with gr.Column(scale=0):
+                    button_inpaint_1 = gr.Button("segment")
+                    button_clear_1 = gr.Button("clear")
+            with gr.Row():
+                sig_inpaint_2 = gr.Image(type="pil", interactive=True, scale=1, label="Signature to Inpaint")
+                sig_segmented_2 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
+                with gr.Column(scale=0):
+                    button_inpaint_2 = gr.Button("segment")
+                    button_clear_2 = gr.Button("clear")
+            
+            inpaint_button = gr.Button("Let's Inpaint")
+            img_inpaint = gr.Image(type="pil", interactive=False, scale=1)
                 
 
-    # fn = remove_masked_lama
-    inpaint_button.click(fn=remove_masked_lama, 
+    # DELETE PHASE
+    delete_button.click(fn=remove_masked_lama, 
                         inputs=[image_delete],
                         outputs=[image_delete_view])
     
@@ -52,14 +63,9 @@ with gr.Blocks() as demo:
                                                 inputs=[image_delete],
                                                 outputs=[x1, y1, x2, y2])
 
+    # ADD PHASE
     set_bounding_box.click(fn=update_and_cut,
                             inputs=[image_delete_view, x1, y1, x2, y2],
                             outputs=[image_add, template_image])
-
-    
-
-    add_button.click(fn=process_and_add_template,
-                    inputs=[image_delete, template_image, x1, y1, x2, y2],
-                    outputs=[image_add_view, original_segmented, template_segmented])
 
 demo.launch(debug=True, show_error=True)
