@@ -5,6 +5,7 @@ from typing import Dict
 import uuid
 from PIL import Image, ImageDraw
 import numpy as np
+import cv2
 
 from .inference import segment_image_with_prompt
 
@@ -90,38 +91,72 @@ def update_and_cut(image, x1, y1, x2, y2):
 def add_template_to_image(original_image, template_image, x1, y1, x2, y2):
     return paste_image(original_image, template_image, x1, y1, x2, y2)
 
-def process_and_add_template(image_delete: Dict[str, Image.Image], template_image: Image.Image, x1, y1, x2, y2):
-    # esto en un futuro podria ser mejorado para que no se tenga que hacer esto
-    image_delete = image_delete["background"]
-    # Recortar la firma original
-    original_signature = cut_image(image_delete, x1, y1, x2, y2)
-        
-    # Segmentar la firma original
-    _, _, mask_original = segment_image_with_prompt(original_signature, "black signature")
-        
-    # Segmentar la firma del template
-    _, _, mask_template = segment_image_with_prompt(template_image, "black signature")
-        
-    # Calcular la media RGB de la firma original segmentada
-    original_rgb = np.array(original_signature)
+def preprocess_images(original_signature, template_image, mask_original, mask_template):
+    # Convertir máscaras a numpy arrays
     mask_original_np = np.array(mask_original) / 255
-    masked_original = original_rgb * mask_original_np[:,:,np.newaxis]
-    mean_rgb = np.mean(masked_original[masked_original != 0], axis=0)
-        
-    # Aplicar el color medio solo a los píxeles de la firma en el template
-    template_rgb = np.array(template_image)
     mask_template_np = np.array(mask_template) / 255
-        
-    # Crear una máscara de 3 canales
-    mask_3channel = np.repeat(mask_template_np[:, :, np.newaxis], 3, axis=2)
-        
-    # Aplicar el color medio solo a los píxeles de la firma
-    colored_signature = mean_rgb * mask_3channel
-    template_rgb = template_rgb * (1 - mask_3channel) + colored_signature
-        
-    colored_template = Image.fromarray(template_rgb.astype(np.uint8))
-        
-    # Añadir el template coloreado a la imagen original
-    result = add_template_to_image(image_delete, colored_template, x1, y1, x2, y2)
-        
-    return result, mask_original, mask_template
+    
+    # Convertir imágenes a numpy arrays
+    original_rgb = np.array(original_signature)
+    template_rgb = np.array(template_image)
+    
+    # Aplicar máscaras
+    original_masked = original_rgb * mask_original_np[:,:,np.newaxis]
+    template_masked = template_rgb * mask_template_np[:,:,np.newaxis]
+    
+    # Convertir a LAB solo las partes segmentadas
+    original_lab = cv2.cvtColor(original_masked.astype(np.uint8), cv2.COLOR_RGB2LAB)
+    template_lab = cv2.cvtColor(template_masked.astype(np.uint8), cv2.COLOR_RGB2LAB)
+    
+    return original_rgb, template_rgb, original_lab, template_lab, mask_original_np, mask_template_np
+
+def transfer_color(original_lab, template_lab, mask_original_np, mask_template_np):
+    # Transferir color solo en los canales A y B
+    for i in range(3):
+        mean_i = np.mean(original_lab[:,:,i][mask_original_np > 0])
+        std_i = np.std(original_lab[:,:,i][mask_original_np > 0])
+        template_lab[:,:,i] = np.where(
+            mask_template_np > 0,
+            (template_lab[:,:,i] - np.mean(template_lab[:,:,i][mask_template_np > 0])) / np.std(template_lab[:,:,i][mask_template_np > 0]) * std_i + mean_i,
+            template_lab[:,:,i]
+        )
+    
+    # Convertir de vuelta a RGB
+    colored_template = cv2.cvtColor(template_lab, cv2.COLOR_LAB2RGB)
+    return colored_template
+
+def smooth_edges(result, mask_template_np):
+    kernel = np.ones((3,3), np.float32) / 9
+    mask_dilated = cv2.dilate(mask_template_np.astype(np.uint8), kernel, iterations=1)
+    mask_edge = mask_dilated - mask_template_np
+    result_blurred = cv2.filter2D(result.astype(np.float32), -1, kernel)
+    result = np.where(mask_edge[:,:,np.newaxis] > 0, result_blurred, result)
+    return result
+
+def process_and_add_template(image_delete: Dict[str, Image.Image], template_image: Image.Image, x1, y1, x2, y2):
+    image_delete = image_delete["background"]
+    original_signature = cut_image(image_delete, x1, y1, x2, y2)
+    
+    # Segmentar las firmas
+    _, _, mask_original = segment_image_with_prompt(original_signature, "signature")
+    _, _, mask_template = segment_image_with_prompt(template_image, "signature")
+    
+    # Preprocesar imágenes
+    original_rgb, template_rgb, original_lab, template_lab, mask_original_np, mask_template_np = preprocess_images(
+        original_signature, template_image, mask_original, mask_template
+    )
+    
+    # Transferir color y convertir de vuelta a RGB
+    colored_template = transfer_color(original_lab, template_lab, mask_original_np, mask_template_np)
+    
+    # Combinar la firma coloreada con el fondo original
+    result = template_rgb * (1 - mask_template_np[:,:,np.newaxis]) + colored_template * mask_template_np[:,:,np.newaxis]
+    
+    # Suavizar bordes
+    result = smooth_edges(result, mask_template_np)
+    
+    # Convertir a Image y añadir a la imagen original
+    colored_template = Image.fromarray(result.astype(np.uint8))
+    final_result = add_template_to_image(image_delete, colored_template, x1, y1, x2, y2)
+    
+    return final_result, mask_original, mask_template
