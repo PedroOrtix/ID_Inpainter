@@ -2,16 +2,27 @@ import numpy as np
 import gradio as gr
 from typing import Dict
 from PIL import Image, ImageDraw
+from gradio_image_annotation import image_annotator
+from gradio_image_prompter import ImagePrompter
 
 from src.signature_inpaint.utils.inference import (remove_masked_lama,
                                                     detect_image_with_prompt,
-                                                    segment_image_with_prompt
+                                                    # segment_image_with_prompt
                                                     )
 
-from src.signature_inpaint.utils.extra import (update_bounding_box,
-                                            cut_image,
-                                            update_and_cut,
-                                            process_and_add_template)
+from src.signature_inpaint.utils.signature_processing import process_and_send_to_inpaint
+
+# from src.signature_inpaint.utils.bounding_box import update_and_cut
+from src.signature_inpaint.utils.image_processing import cut_image
+
+def crop(annotations):
+    if annotations["boxes"]:
+        box = annotations["boxes"][0]
+        return annotations["image"][
+            box["ymin"]:box["ymax"],
+            box["xmin"]:box["xmax"]
+        ]
+    return None
 
 with gr.Blocks() as demo:
     gr.Markdown("# Inpaint with LaMa")
@@ -21,28 +32,29 @@ with gr.Blocks() as demo:
             with gr.Row():
                 delete_button = gr.Button("Delete")
                 send_add_button = gr.Button("Send to Add")
+                send_to_inpaint_button = gr.Button("Send to Inpaint")  # Nuevo botón
             image_delete_view = gr.Image(interactive=False, type="pil", label="Image Signature Template", show_download_button=True)
         with gr.Tab("Adding phase"):
             with gr.Row():
                 with gr.Column(min_width=200):
-                    image_add = gr.Image(type="pil", interactive=False, scale = 2, inputs=image_delete_view)
+                    func_aux = lambda x: x
+                    annotator_crop = image_annotator(
+                        image_type="numpy",
+                        disable_edit_boxes=True,
+                        single_box=True,
+                    )
                 with gr.Column(min_width=200):
-                    # add text box for the 4 coordinates
-                    x1 = gr.Number(label="X1")
-                    y1 = gr.Number(label="Y1")
-                    x2 = gr.Number(label="X2")
-                    y2 = gr.Number(label="Y2")
-                    set_bounding_box = gr.Button("Set Bounding Box")
-                    template_image = gr.Image(type="pil", interactive=True, scale = 2, label="Template Image")
+                    crop_button = gr.Button("Recortar")
+                    template_image = gr.Image(type="pil", interactive=True, scale=2, label="Template Image")
         with gr.Tab("Inpainting phase"):
             with gr.Row():
-                sig_inpaint_1 = gr.Image(type="pil", interactive=True, scale=1, label="Original Signature")
+                sig_inpaint_1 = ImagePrompter(label="Original Signature")
                 sig_segmented_1 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
                 with gr.Column(scale=0):
                     button_inpaint_1 = gr.Button("segment")
                     button_clear_1 = gr.Button("clear")
             with gr.Row():
-                sig_inpaint_2 = gr.Image(type="pil", interactive=True, scale=1, label="Signature to Inpaint")
+                sig_inpaint_2 = ImagePrompter(label="Signature to Inpaint")
                 sig_segmented_2 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
                 with gr.Column(scale=0):
                     button_inpaint_2 = gr.Button("segment")
@@ -57,15 +69,24 @@ with gr.Blocks() as demo:
                         inputs=[image_delete],
                         outputs=[image_delete_view])
     
-    send_add_button.click(fn=lambda x: x,
+    # SEND TO ADD PHASE
+
+    send_add_button.click(fn=lambda x: {"image": x, "boxes": []},
                         inputs=[image_delete_view],
-                        outputs=[image_add]).then(fn=detect_image_with_prompt,
-                                                inputs=[image_delete],
-                                                outputs=[x1, y1, x2, y2])
+                        outputs=[annotator_crop])
+    
+    # SEND TO INPAINT PHASE
+    send_to_inpaint_button.click(
+        fn=lambda x: process_and_send_to_inpaint(x),
+        inputs=[image_delete],
+        outputs=[sig_inpaint_1]
+    )
 
     # ADD PHASE
-    set_bounding_box.click(fn=update_and_cut,
-                            inputs=[image_delete_view, x1, y1, x2, y2],
-                            outputs=[image_add, template_image])
+    crop_button.click(fn=crop,
+                    inputs=[annotator_crop],
+                    outputs=[template_image])
+    
+    
 
 demo.launch(debug=True, show_error=True)

@@ -1,3 +1,4 @@
+# for Florence2-Large modality
 IMAGE_OPEN_VOCABULARY_DETECTION_MODE = "open vocabulary detection + image masks"
 
 IMAGE_INFERENCE_MODES = [
