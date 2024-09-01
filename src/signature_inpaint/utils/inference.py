@@ -6,6 +6,7 @@ from typing import Tuple, List, Dict
 
 from .florence import load_florence_model, run_florence_inference, FLORENCE_OPEN_VOCABULARY_DETECTION_TASK
 from .sam import load_sam_image_model, run_sam_inference
+from .show_utils import show_masks
 from simple_lama_inpainting import SimpleLama
 from diffusers import StableDiffusionInpaintPipeline
 
@@ -118,6 +119,42 @@ def segment_image_with_prompt(img: Image.Image, prompt: str) -> Tuple[List[Dict[
     
     return mask_coordinates, masked_image, mask_image
 
+def segment_image_with_points(img_dict: Dict[str, any]) -> Tuple[Image.Image, Image.Image]:
+    
+    image = np.array(img_dict["background"].convert("RGB"))
+    
+    predictor = load_sam_image_model(device=DEVICE)
+
+    predictor.set_image(image)
+
+    input_point = np.array(img_dict["points"])
+    # the tracking points labels are the labels of the points (include or exclude)
+    # we set all the labels to 1 (include) for reduce complexity
+    input_label = np.ones(len(input_point))
+
+    print(predictor._features["image_embed"].shape, predictor._features["image_embed"][-1].shape)
+
+    
+
+    masks, scores, logits = predictor.predict(
+        point_coords=input_point,
+        point_labels=input_label,
+        multimask_output=False,
+    )
+    sorted_ind = np.argsort(scores)[::-1]
+    masks = masks[sorted_ind]
+    scores = scores[sorted_ind]
+    logits = logits[sorted_ind]
+
+    print(masks.shape)
+
+    results, mask_results = show_masks(image, masks, scores, point_coords=input_point, input_labels=input_label, borders=True)
+    print(results)
+
+    # results[0]
+    # we will return only the first mask
+    return mask_results[0]
+
 # función auxiliar para preparar la máscara
 def prepare_mask(mask):
     """
@@ -204,15 +241,15 @@ def remove_masked_sd(original_image: Image.Image,
         mask_image = mask_image.resize((width, height))
 
     # Realizar el inpainting para eliminar el elemento
-    inpainted_image = pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        image=original_image,
-        mask_image=mask_image,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-        strength=strength
-    ).images[0]
+    # inpainted_image = pipe(
+    #     prompt=prompt,
+    #     negative_prompt=negative_prompt,
+    #     image=original_image,
+    #     mask_image=mask_image,
+    #     num_inference_steps=num_inference_steps,
+    #     guidance_scale=guidance_scale,
+    #     strength=strength
+    # ).images[0]
 
     # Asegurarse de que todas las imágenes tengan el mismo tamaño
     inpainted_image = inpainted_image.resize(original_image.size)

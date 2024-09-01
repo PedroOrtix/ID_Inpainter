@@ -1,12 +1,10 @@
 import numpy as np
 import gradio as gr
-from typing import Dict
-from PIL import Image, ImageDraw
 from gradio_image_annotation import image_annotator
 from gradio_image_prompter import ImagePrompter
 
-from src.signature_inpaint.utils.inference import (remove_masked_lama,
-                                                    detect_image_with_prompt,
+from src.signature_inpaint.utils.inference import (remove_masked_lama, segment_image_with_points,
+                                                    # detect_image_with_prompt,
                                                     # segment_image_with_prompt
                                                     )
 
@@ -87,6 +85,21 @@ with gr.Blocks() as demo:
                     inputs=[annotator_crop],
                     outputs=[template_image])
     
+    # INPAINT PHASE
+    button_clear_1.click(fn=lambda x: {"image": x, "points": []},
+                        inputs=[sig_inpaint_1],
+                        outputs=[sig_inpaint_1])
     
+    button_clear_2.click(fn=lambda x: {"image": x, "points": []},
+                        inputs=[sig_inpaint_2],
+                        outputs=[sig_inpaint_2])
+    
+    button_inpaint_1.click(fn=segment_image_with_points,
+                        inputs=[sig_inpaint_1],
+                        outputs=[sig_segmented_1])
+
+    button_inpaint_2.click(fn=segment_image_with_points,
+                        inputs=[sig_inpaint_2],
+                        outputs=[sig_segmented_2])
 
 demo.launch(debug=True, show_error=True)
