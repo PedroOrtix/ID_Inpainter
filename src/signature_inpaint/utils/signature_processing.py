@@ -57,7 +57,7 @@ def process_and_send_to_inpaint(image_dict):
     x1, y1, x2, y2 = detect_image_with_prompt(image_dict)
     
     # Recortar la imagen usando las coordenadas detectadas
-    background_image = Image.fromarray(image_dict["background"])
+    background_image = image_dict["background"]
     cropped_image = cut_image(background_image, x1, y1, x2, y2)
     
     # Crear el diccionario con la imagen recortada y una lista vacía de puntos

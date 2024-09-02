@@ -11,7 +11,6 @@ from src.signature_inpaint.utils.inference import (remove_masked_lama, segment_i
 from src.signature_inpaint.utils.signature_processing import process_and_send_to_inpaint
 
 # from src.signature_inpaint.utils.bounding_box import update_and_cut
-from src.signature_inpaint.utils.image_processing import cut_image
 
 def crop(annotations):
     if annotations["boxes"]:
@@ -21,6 +20,10 @@ def crop(annotations):
             box["xmin"]:box["xmax"]
         ]
     return None
+
+def show_points(input_data):
+    points = input_data.get("points", [])
+    return str([point[:2] for point in points])
 
 with gr.Blocks() as demo:
     gr.Markdown("# Inpaint with LaMa")
@@ -46,17 +49,17 @@ with gr.Blocks() as demo:
                     template_image = gr.Image(type="pil", interactive=True, scale=2, label="Template Image")
         with gr.Tab("Inpainting phase"):
             with gr.Row():
-                sig_inpaint_1 = ImagePrompter(label="Original Signature")
+                sig_inpaint_1 = ImagePrompter(label="Original Signature", type="pil", scale=2)
                 sig_segmented_1 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
-                with gr.Column(scale=0):
-                    button_inpaint_1 = gr.Button("segment")
-                    button_clear_1 = gr.Button("clear")
+                
+            button_inpaint_1 = gr.Button("segment")
+            points_textbox_1 = gr.Textbox(label="Puntos seleccionados", interactive=False)
             with gr.Row():
-                sig_inpaint_2 = ImagePrompter(label="Signature to Inpaint")
+                sig_inpaint_2 = ImagePrompter(label="Signature to Inpaint", type="pil", scale=2)
                 sig_segmented_2 = gr.Image(interactive=False, type="pil", label="Signature Segmented", show_download_button=True)
-                with gr.Column(scale=0):
-                    button_inpaint_2 = gr.Button("segment")
-                    button_clear_2 = gr.Button("clear")
+                
+            button_inpaint_2 = gr.Button("segment")
+            points_textbox_2 = gr.Textbox(label="Puntos seleccionados", interactive=False)
             
             inpaint_button = gr.Button("Let's Inpaint")
             img_inpaint = gr.Image(type="pil", interactive=False, scale=1)
@@ -86,20 +89,16 @@ with gr.Blocks() as demo:
                     outputs=[template_image])
     
     # INPAINT PHASE
-    button_clear_1.click(fn=lambda x: {"image": x, "points": []},
-                        inputs=[sig_inpaint_1],
-                        outputs=[sig_inpaint_1])
-    
-    button_clear_2.click(fn=lambda x: {"image": x, "points": []},
-                        inputs=[sig_inpaint_2],
-                        outputs=[sig_inpaint_2])
-    
     button_inpaint_1.click(fn=segment_image_with_points,
                         inputs=[sig_inpaint_1],
-                        outputs=[sig_segmented_1])
+                        outputs=[sig_segmented_1]).then(fn=show_points,
+                                                        inputs=[sig_inpaint_1],
+                                                        outputs=[points_textbox_1])
 
     button_inpaint_2.click(fn=segment_image_with_points,
                         inputs=[sig_inpaint_2],
-                        outputs=[sig_segmented_2])
+                        outputs=[sig_segmented_2]).then(fn=show_points,
+                                                        inputs=[sig_inpaint_2],
+                                                        outputs=[points_textbox_2])
 
 demo.launch(debug=True, show_error=True)

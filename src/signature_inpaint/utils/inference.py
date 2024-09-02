@@ -119,22 +119,21 @@ def segment_image_with_prompt(img: Image.Image, prompt: str) -> Tuple[List[Dict[
     
     return mask_coordinates, masked_image, mask_image
 
-def segment_image_with_points(img_dict: Dict[str, any]) -> Tuple[Image.Image, Image.Image]:
+def segment_image_with_points(img_dict: Dict[str, any]) -> Image.Image:
     
-    image = np.array(img_dict["background"].convert("RGB"))
+    image = np.array(img_dict["image"].convert("RGB"))
     
     predictor = load_sam_image_model(device=DEVICE)
 
     predictor.set_image(image)
 
     input_point = np.array(img_dict["points"])
+    input_point = input_point[:, :2]
     # the tracking points labels are the labels of the points (include or exclude)
     # we set all the labels to 1 (include) for reduce complexity
     input_label = np.ones(len(input_point))
 
     print(predictor._features["image_embed"].shape, predictor._features["image_embed"][-1].shape)
-
-    
 
     masks, scores, logits = predictor.predict(
         point_coords=input_point,

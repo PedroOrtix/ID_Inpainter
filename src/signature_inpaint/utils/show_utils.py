@@ -30,47 +30,32 @@ def show_box(box, ax):
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0, 0, 0, 0), lw=2))    
 
 def show_masks(image, masks, scores, point_coords=None, box_coords=None, input_labels=None, borders=True):
-    combined_images = []  # List to store filenames of images with masks overlaid
-    mask_images = []      # List to store filenames of separate mask images
+    combined_images = []  # Lista para almacenar imágenes con máscaras superpuestas
+    mask_images = []      # Lista para almacenar imágenes de máscaras separadas
 
     for i, (mask, score) in enumerate(zip(masks, scores)):
-        # ---- Original Image with Mask Overlaid ----
+        # ---- Imagen original con máscara superpuesta ----
         plt.figure(figsize=(10, 10))
         plt.imshow(image)
-        show_mask(mask, plt.gca(), borders=borders)  # Draw the mask with borders
-        """
-        if point_coords is not None:
-            assert input_labels is not None
-            show_points(point_coords, input_labels, plt.gca())
-        """
+        show_mask(mask, plt.gca(), borders=borders)  # Dibujar la máscara con bordes
         if box_coords is not None:
             show_box(box_coords, plt.gca())
         if len(scores) > 1:
-            plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
+            plt.title(f"Máscara {i+1}, Puntuación: {score:.3f}", fontsize=18)
         plt.axis('off')
 
-        # Save the figure as a JPG file
-        combined_filename = f"combined_image_{i+1}.jpg"
-        plt.savefig(combined_filename, format='jpg', bbox_inches='tight')
-        combined_images.append(combined_filename)
+        # Agregar la figura a la lista de imágenes combinadas
+        combined_images.append(plt.gcf())
 
-        plt.close()  # Close the figure to free up memory
-
-        # ---- Separate Mask Image (White Mask on Black Background) ----
-        # Create a black image
+        # ---- Imagen de máscara separada (Máscara blanca sobre fondo negro) ----
         mask_image = np.zeros_like(image, dtype=np.uint8)
-        
-        # The mask is a binary array where the masked area is 1, else 0.
-        # Convert the mask to a white color in the mask_image
         mask_layer = (mask > 0).astype(np.uint8) * 255
-        for c in range(3):  # Assuming RGB, repeat mask for all channels
+        for c in range(3):  # Asumiendo RGB, repetir máscara para todos los canales
             mask_image[:, :, c] = mask_layer
 
-        # Save the mask image
-        mask_filename = f"mask_image_{i+1}.png"
-        Image.fromarray(mask_image).save(mask_filename)
-        mask_images.append(mask_filename)
+        # Agregar la imagen de la máscara a la lista de imágenes de máscaras
+        mask_images.append(Image.fromarray(mask_image))
 
-        plt.close()  # Close the figure to free up memory
+        plt.close()  # Cerrar la figura para liberar memoria
 
     return combined_images, mask_images
