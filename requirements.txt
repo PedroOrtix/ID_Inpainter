@@ -6,6 +6,9 @@ opencv-python
 paddlepaddle==2.6.1
 paddleocr==2.8.1
 gradio==4.7.1
+gradio-image-annotation==0.2.3
+gradio-image-prompter==0.1.0
+colortrans==1.0.0
 setuptools==66.0.0
 datasets==2.11.0
 transformers==4.28.1
@@ -18,7 +21,6 @@ samv2
 timm
 einops
 diffusers
-gradio-image-annotation==0.2.3
-gradio-image-prompter==0.1.0
+
 # only for colab
 # "jax[cuda12_pip]==0.4.23" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html -q
