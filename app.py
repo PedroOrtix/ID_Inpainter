@@ -118,7 +118,7 @@ def process_image_gradio(imagen_recortada,
         imagenes_reconstruidas.append(img_reconstruida)
 
     # superponer la imagen 512x512 modificada a la original
-    lista_imagenes_template =  [img_array = np.array(imagen_recortada)[:, :, :3] for _ in range(len(imagenes_reconstruidas))]
+    lista_imagenes_template =  [np.array(imagen_recortada)[:, :, :3] for _ in range(len(imagenes_reconstruidas))]
     x_min, y_min, x_max, y_max = coordenadas_originales
 
     for img_reconstruida, i in enumerate(imagenes_reconstruidas):
