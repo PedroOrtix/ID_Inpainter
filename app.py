@@ -88,6 +88,11 @@ def process_image_gradio(imagen_recortada,
                          coordenadas_originales,
                          bounds_resized):
     
+    model = PaddleOCR(use_angle_cls=True, lang='es')  # 'es' para español
+    bounds_resized = model.ocr(np.array(imagen_recortada))
+    bounds_resized = ocr.convert_paddle_to_easyocr(bounds_resized)
+
+    
     right_bounds = [[bound for bound in bounds_resized if bound[1] == palabra_a_reemplazar][0]]
 
     if palabra_a_reemplazar.isalpha() and len(palabra_a_reemplazar) < len(palabra_reemplazo.strip()):
