@@ -92,7 +92,7 @@ def process_image(palabra,
     img_pil = Image.fromarray(img_resized).convert('RGB')
     # juntamos la misma imagen verticalmente para que sea cuadrada junto al papping en blanco
     # unicamente cuando el doble del alto sea menor que que 512px que lo que admite el modelo
-    if height < 512:
+    if 2*height <= 512:
         img_pil = juntar_imagenes_vertical(img_pil, img_pil)
 
     # dimesion de la imagen nueva con la adición vertical para futura restauración del padding

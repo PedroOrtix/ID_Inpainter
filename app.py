@@ -8,7 +8,7 @@ from src.signature_inpaint.utils.inference import remove_masked_lama, segment_im
 from src.signature_inpaint.utils.signature_processing import procesar_y_fusionar_firma_template
 from src.text_inpaint import ocr
 from src.text_inpaint.utils import separar_cadenas
-from text_inpaint.run import simple_inpaint
+from src.text_inpaint.run import simple_inpaint
 
 # from src.signature_inpaint.utils.bounding_box import update_and_cut
 
