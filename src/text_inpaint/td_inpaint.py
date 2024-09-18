@@ -14,13 +14,13 @@ from src.text_inpaint.inpaint_functions import format_prompt, to_tensor, add_tok
 #### import diffusion models
 text_encoder = CLIPTextModel.from_pretrained('JingyeChen22/textdiffuser2-full-ft-inpainting', subfolder="text_encoder").cuda().half()
 
-tokenizer = CLIPTokenizer.from_pretrained('runwayml/stable-diffusion-v1-5', subfolder="tokenizer")
+tokenizer = CLIPTokenizer.from_pretrained('benjamin-paine/stable-diffusion-v1-5', subfolder="tokenizer")
 
-vae = AutoencoderKL.from_pretrained('runwayml/stable-diffusion-v1-5', subfolder="vae").half().cuda()
+vae = AutoencoderKL.from_pretrained('benjamin-paine/stable-diffusion-v1-5', subfolder="vae").half().cuda()
 
 unet = UNet2DConditionModel.from_pretrained('JingyeChen22/textdiffuser2-full-ft-inpainting', subfolder="unet").half().cuda()
 
-scheduler = DDPMScheduler.from_pretrained('runwayml/stable-diffusion-v1-5', subfolder="scheduler") 
+scheduler = DDPMScheduler.from_pretrained('benjamin-paine/stable-diffusion-v1-5', subfolder="scheduler") 
 
 
 def inpaint(orig_i, prompt,keywords,positive_prompt,radio,slider_step,slider_guidance,slider_batch,slider_natural, global_dict):
